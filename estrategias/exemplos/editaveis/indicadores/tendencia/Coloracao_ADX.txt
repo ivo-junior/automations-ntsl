@@ -1,0 +1,4 @@
+Inicio
+  Se (ADX(9,9) >= 31) e (ADX(9,9) < 35) então
+    PaintBar(clVermelho);
+Fim;

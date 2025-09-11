@@ -1,0 +1,12 @@
+Inicio
+  Se (ADX(9,9) > 29) e (ADX(9,9) <= 32) então
+    PaintBar(clVermelho)
+  Senão Se (ADX(9,9) = 20) então
+    PaintBar(clVerdeLimão)
+  Senão Se (ADX(9,9) = 21) então
+    PaintBar(clVerdeLimão)
+  Senão Se (ADX(9,9) = 19) então
+    PaintBar(clVerdeLimão)
+  Senão Se (ADX(9,9) = 22) então
+    PaintBar(clVerdeLimão);
+Fim;

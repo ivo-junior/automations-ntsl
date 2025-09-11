@@ -1,0 +1,209 @@
+Input
+
+  Periodo(2);
+
+var
+
+  floor_pivot : float;
+  floor_s1 : float;
+  floor_s2 : float;
+  floor_s3 : float;
+
+  floor_r1 : float;
+  floor_r2 : float;
+  floor_r3 : float;
+
+  _x : float;
+  _close : float;
+  _open : float;
+  _high : float;
+  _low : float;
+
+  demark_pivot : float;
+  demark_s1 : float;
+  demark_r1 : float;
+
+  woodie_pivot : float;
+  woodie_r1 : float;
+  woodie_r2 : float;
+  woodie_s1 : float;
+  woodie_s2 : float;
+
+  camarilla_r4 : float;
+  camarilla_r3 : float;
+  camarilla_r2 : float;
+  camarilla_r1 : float; 
+  camarilla_s1 : float; 
+  camarilla_s2 : float; 
+  camarilla_s3 : float; 
+  camarilla_s4 : float;  
+
+  fib_r3 : float;
+  fib_r2 : float;
+  fib_r1 : float;
+  fib_s1 : float;
+  fib_s2 : float;
+  fib_s3 : float;
+
+begin
+
+  _close := CLOSED(1);
+  _open := OPEND(1);
+  _high := HIGHD(1);
+  _low := LOWD(1);
+
+  //### floor pivots ###
+  floor_pivot := (_high+_low+_close)/3;
+  floor_s1 := (floor_pivot*2) - _high;
+  floor_s2 := floor_pivot + (_high-_low);
+  floor_s3 := _low + 2*(_high - floor_pivot);
+
+  floor_r1 := (floor_pivot*2) - _low;
+  floor_r2 := floor_pivot + (_high-_low);
+  floor_r3 := _high + 2*(floor_pivot - _low);
+
+
+  //### TOM DeMark's Pivots ###
+  _x := 0.0;
+
+  if (_close < _open) then
+    begin
+      _x := _high + (2*_low)+_close;
+    end
+  else if (_close > _open) then
+    begin
+      _x := (2 * _high)+_low+_close;
+    end
+  else
+    begin
+      _x := _high + _low + (2*_close);
+    end;
+
+  demark_pivot := _x/4;
+  demark_s1 := (_x/2) - _high;
+  demark_r1 := (_x/2) - _low;
+
+  //### Woodie's pivots ###
+
+  woodie_pivot := (_high + _low + (2*_close))/4;
+  woodie_r1 := (2*woodie_pivot) - _low;
+  woodie_r2 := woodie_pivot + _high - _low;
+  woodie_s1 := (2*woodie_pivot) - _high;
+  woodie_s2 := woodie_pivot - _high + _low;
+
+  //### Camarilla Pivots ###
+
+  camarilla_r4 := _close + ((_high - _low) * 1.1/2);
+  camarilla_r3 := _close + ((_high - _low) * 1.1/4);
+  camarilla_r2 := _close + ((_high - _low) * 1.1/6);
+  camarilla_r1 := _close + ((_high - _low) * 1.1/12); 
+  camarilla_s1 := _close - ((_high - _low) * 1.1/12); 
+  camarilla_s2 := _close - ((_high - _low) * 1.1/6); 
+  camarilla_s3 := _close - ((_high - _low) * 1.1/4); 
+  camarilla_s4 := _close - ((_high - _low) * 1.1/2);
+  
+  //### Fibonacci Pivots ###
+  
+  fib_r3 := floor_pivot + ((_high - _low) * 1.000);
+  fib_r2 := floor_pivot + ((_high - _low) * 0.618);
+  fib_r1 := floor_pivot + ((_high - _low) * 0.382);
+  fib_s1 := floor_pivot - ((_high - _low) * 0.382);
+  fib_s2 := floor_pivot - ((_high - _low) * 0.618);
+  fib_s3 := floor_pivot - ((_high - _low) * 1.000);
+  
+  //### PLOTAGEM ###
+     
+  {Plot(floor_pivot);
+  SetPlotColor(1, RGB(150, 50, 50));
+  SetPlotWidth(1, 2);
+  Plot7(floor_s1);
+  SetPlotColor(2, RGB(150, 57, 57));
+  SetPlotWidth(2, 2);
+  Plot2(floor_s2);
+  SetPlotColor(3, RGB(150, 37, 37));
+  SetPlotWidth(3, 2);
+  Plot3(floor_s3);
+  SetPlotColor(4, RGB(150, 27, 27));
+  SetPlotWidth(4, 2);
+  Plot4(floor_r1);
+  SetPlotColor(5, RGB(150, 67, 67));
+  SetPlotWidth(5, 2);
+  Plot5(floor_r2);
+  SetPlotColor(6, RGB(150, 77, 77));
+  SetPlotWidth(6, 2);
+  Plot6(floor_r3);
+  SetPlotColor(7, RGB(150, 87, 87));
+  SetPlotWidth(7, 2);}
+
+  Plot8(demark_pivot);
+  SetPlotColor(8, clGreen);
+  SetPlotWidth(8, 2);
+  Plot9(demark_s1);
+  SetPlotColor(9, clGreen);
+  SetPlotWidth(9, 2);
+  Plot10(demark_r1);
+  SetPlotColor(10, clGreen);
+  SetPlotWidth(10, 2);
+
+
+  {Plot11(woodie_pivot);
+  SetPlotColor(11, clGreen);
+  SetPlotWidth(11, 2); 
+  Plot12(woodie_r1);
+  SetPlotColor(12, clGreen);
+  SetPlotWidth(12, 2);
+  Plot13(woodie_r2);
+  SetPlotColor(13, clGreen);
+  SetPlotWidth(13, 2);
+  Plot14(woodie_s1);
+  SetPlotColor(14, clGreen);
+  SetPlotWidth(14, 2);
+  Plot15(woodie_s2);
+  SetPlotColor(15, clGreen);
+  SetPlotWidth(15, 2);}
+
+  {Plot16(camarilla_r4);
+  SetPlotColor(16, clBlue);
+  SetPlotWidth(16, 2);
+  Plot17(camarilla_r3);
+  SetPlotColor(17, clBlue);
+  SetPlotWidth(17, 2);
+  Plot18(camarilla_r2);
+  SetPlotColor(18, clBlue);
+  SetPlotWidth(18, 2);
+  Plot19(camarilla_r1);
+  SetPlotColor(19, clBlue);
+  SetPlotWidth(19, 2);
+  Plot20(camarilla_s1);
+  SetPlotColor(20, clBlue);
+  SetPlotWidth(20, 2);
+  Plot21(camarilla_s2);
+  SetPlotColor(21, clBlue);
+  SetPlotWidth(21, 2);
+  Plot22(camarilla_s3);
+  SetPlotColor(22, clBlue);
+  SetPlotWidth(22, 2);
+  Plot23(camarilla_s4);
+  SetPlotColor(23, clBlue);
+  SetPlotWidth(23, 2);}
+
+  {Plot24(fib_r3);
+  SetPlotColor(24, clBlue);
+  SetPlotWidth(24, 2);
+  Plot25(fib_r2);
+  SetPlotColor(25, clBlue);
+  SetPlotWidth(25, 2);
+  Plot26(fib_r1);
+  SetPlotColor(26, clBlue);
+  SetPlotWidth(26, 2);
+  Plot27(fib_s1);
+  SetPlotColor(27, clBlue);
+  SetPlotWidth(27, 2);
+  Plot28(fib_s2);
+  SetPlotColor(28, clBlue);
+  SetPlotWidth(28, 2);
+  Plot29(fib_s3);
+  SetPlotColor(29, clBlue);
+  SetPlotWidth(29, 2);}
+
+end;

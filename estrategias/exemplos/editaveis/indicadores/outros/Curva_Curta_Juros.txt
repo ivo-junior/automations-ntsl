@@ -1,0 +1,78 @@
+// *** Desenvolvido por Alessandro Drese
+
+const
+wdo = Asset("WDOFUT", feedBMF);
+win = Asset("WINFUT", feedBMF);
+DI = Asset("DI1F26", feedBMF);  // Contrato DI selecionado
+PETR4 = Asset("PETR4", feedBOVESPA);
+VALE3 = Asset("VALE3", feedBOVESPA);
+
+var
+varWin, varWdo, varDI, mediaDI, varPETR4, varVALE3, varAux : float;
+fechAntWin, fechAntWdo, fechAntDI, fechAntPETR4, fechAntVALE3 : float;
+tickerAux : float;
+colorWin, colorWdo : integer;
+begin
+  // Cálculo variacao   
+  if(ContadorDeCandle = 1) then
+    begin
+      fechAntWin := win.close[1];
+      fechAntWdo := wdo.close[1];
+      fechAntDI := DI.close[1];
+      fechAntPETR4 := PETR4.close[1];
+      fechAntVALE3 := VALE3.close[1];
+    end;
+
+  varWin := ((win.close - fechAntWin)/fechAntWin)*100;
+  varWdo := ((wdo.close - fechAntwdo)/fechAntwdo)*100;
+  varDI := ((DI.close - fechAntDI)/fechAntDI)*100;
+  mediaDI := waverage(varDI, 50); 
+  varPETR4 := ((PETR4.close - fechAntPETR4)/fechAntPETR4)*100;
+  varVALE3 := ((VALE3.close - fechAntVALE3)/fechAntVALE3)*100;
+
+  
+  // Coloravao conforme variação
+  if(varWin > varWin[1]) then
+    colorWin := clGreen
+  else if(varWin < varWin[1]) then
+    colorWin := clRed;
+
+  if(varWdo > varWdo[1]) then
+    colorWdo := clGreen
+  else if(varWdo < varWdo[1]) then
+    colorWdo := clRed;
+
+  
+  // Paridade conforme o ativo (IND OU DOL) selecionado              
+  if(minpriceincrement = 5) then
+    begin
+      tickerAux := varWdo;
+      varAux := varWin - varWdo;
+    end
+  else if(minpriceincrement = 0.5) then
+    begin
+      tickerAux := varWin;
+      varAux := varWdo - varWin;
+    end;
+
+  
+  // Saídas indicador
+  HorizontalLineCustom(varWin, colorWin, 1, 0, win.getAsset, 8, 1, date, date,0, time[1], time);
+  HorizontalLineCustom(varWdo, colorWdo, 1, 0, wdo.getAsset, 8, 1, date, date,0, time[1], time);
+  HorizontalLineCustom(varDI, clWhite, 1, 0, DI.getAsset, 8, 1, date, date,0, time[1], time);
+
+  Plot(varWin);
+  SetPlotColor(1, clGreen);
+  Plot2(varWdo);
+  SetPlotColor(2, clRed);
+  Plot3(varDI);
+  SetPlotColor(3, clWhite);
+  Plot4(mediaDI);
+  SetPlotColor(4, rgb(200, 200, 200));
+  SetPlotStyle(4, 1);
+  SetPlotWidth(4, 2);
+  plot5(0); 
+  SetPlotColor(5, clGray);
+  Plot7(varAux);
+  SetPlotColor(7, clBlue);      
+end;

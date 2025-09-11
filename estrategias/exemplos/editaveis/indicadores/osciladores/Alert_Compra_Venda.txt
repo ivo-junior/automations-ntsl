@@ -1,0 +1,22 @@
+input
+
+  Periodo(14);
+var
+
+  myRsi : float;
+
+begin
+
+  myRsi := RSI(Periodo, 0);
+
+  if myRsi > 70 then
+  begin
+    alert(clRed);
+  end
+  else if myRsi < 30 then
+  begin
+    alert(clGreen);
+  end;
+
+  
+end;

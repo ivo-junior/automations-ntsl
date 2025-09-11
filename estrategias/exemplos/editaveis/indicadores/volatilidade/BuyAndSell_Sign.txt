@@ -1,0 +1,133 @@
+Input
+
+  Periodo_Base(21);
+  Desvio_Base(1.00);
+  Filtro_ATR(true);
+  Periodo_ATR(5);
+  hl(false);
+
+Var
+
+  Desvio_Upper : float;
+  Desvio_Lower : float;
+  Linha_Tend : float;
+  i_Tend : float;
+  Compra_ : float;
+  Venda_ : float;
+
+  Sinal_Base : integer;
+
+begin
+  
+  Desvio_Upper := Media(Periodo_Base, CLOSE) + StdDevs(CLOSE, Periodo_Base) * Desvio_Base;
+  Desvio_Lower := Media(Periodo_Base, CLOSE) - StdDevs(CLOSE, Periodo_Base) * Desvio_Base;
+  
+  Linha_Tend := 0.0;
+  i_Tend := 0.0;
+  Compra_ := 0.0;
+  Venda_ := 0.0;
+
+  if CLOSE > Desvio_Upper then
+  begin
+    Sinal_Base := 1;
+  end
+  else if CLOSE < Desvio_Lower then
+  begin
+    Sinal_Base := -1;
+  end
+  else
+    Sinal_Base := 0;
+
+
+  // Teste Sinal
+  if (Sinal_Base = 1) and (Filtro_ATR = true) then
+  begin
+    Linha_Tend := LOW - AvgTrueRange(Periodo_ATR, 1);
+    if Linha_Tend < Linha_Tend[1] then
+    begin
+      Linha_Tend := Linha_Tend[1];
+    end;
+  end;
+  if (Sinal_Base = -1) and (Filtro_ATR = true) then
+  begin
+    Linha_Tend := HIGH + AvgTrueRange(Periodo_ATR, 1);
+    if Linha_Tend > Linha_Tend[1] then
+    begin
+      Linha_Tend := Linha_Tend[1];
+    end;
+  end;
+  if (Sinal_Base = 0) and (Filtro_ATR = true) then
+  begin
+    Linha_Tend := Linha_Tend[1];  
+  end;
+
+  // Teste Sinal
+  if (Sinal_Base = 1) and (Filtro_ATR = false) then
+  begin
+    Linha_Tend := LOW;
+    if Linha_Tend < Linha_Tend[1] then
+    begin
+      Linha_Tend := Linha_Tend[1];
+    end;
+  end;
+  if (Sinal_Base = -1) and (Filtro_ATR = false) then
+  begin
+    Linha_Tend := HIGH;
+    if Linha_Tend > Linha_Tend[1] then
+    begin
+      Linha_Tend := Linha_Tend[1];
+    end;
+  end;
+  if (Sinal_Base = 0) and (Filtro_ATR = false) then
+  begin
+    Linha_Tend := Linha_Tend[1];  
+  end;
+
+  // Comparativo-Controle
+  i_Tend := i_Tend[1];
+  if Linha_Tend > Linha_Tend[1] then
+  begin
+    i_Tend := 1;
+  end;
+  if Linha_Tend < Linha_Tend[1] then
+  begin
+    i_Tend := -1;
+  end;
+
+
+  // Compra_Sinal
+  if (i_Tend[1] = -1) and (i_Tend = 1) then
+  begin
+    Compra_ := 1;
+  end;
+
+  // Venda_Sinal
+  if (i_Tend[1] = 1) and (i_Tend = -1) then
+  begin
+    Venda_ := 1;
+  end;
+
+
+  Plot(Linha_Tend);
+  
+                                                                
+  if (i_Tend > 0) then
+  begin
+    PaintBar(clBlue);
+  end
+  else
+    PaintBar(clRed);
+
+  if (Compra_ = 1) and (hl = false) then
+  begin
+    Linha_Tend := Linha_Tend - AvgTrueRange(8, 0);
+    Alert(ClGreen);
+  end;
+
+  if (Venda_ = 1) and (hl = false) then
+  begin
+    Linha_Tend := Linha_Tend + AvgTrueRange(8, 0);
+    Alert(ClGreen);
+  end;
+
+end;

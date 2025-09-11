@@ -1,0 +1,35 @@
+Input
+  Periodo_1(21);
+  Periodo_2(52);
+  Periodo_3(100);
+  Periodo_4(200);
+  Periodo_5(300);
+
+Var
+  LinhaR_1 : float;
+  LinhaR_2 : float;
+  LinhaR_3 : float;
+  LinhaR_4 : float;
+  LinhaR_5 : float;
+
+begin
+  
+  LinhaR_1 := LinearRegressionChannel(Periodo_1, true, 2.00, true, 2.00);
+  LinhaR_2 := LinearRegressionChannel(Periodo_2, true, 2.00, true, 2.00);
+  LinhaR_3 := LinearRegressionChannel(Periodo_3, true, 2.00, true, 2.00);
+  LinhaR_4 := LinearRegressionChannel(Periodo_4, true, 2.00, true, 2.00);
+  LinhaR_5 := LinearRegressionChannel(Periodo_5, true, 2.00, true, 2.00);
+
+
+  Plot(LinhaR_1);
+  SetPlotColor(1, clGreen);
+  Plot2(LinhaR_2);
+  SetPlotColor(2, clBlue);
+  Plot3(LinhaR_3);
+  SetPlotColor(3, clRed);
+  Plot4(LinhaR_4);
+  SetPlotColor(4, clWhite);
+  Plot5(LinhaR_5);
+  SetPlotColor(5, clYellow);
+  
+end;

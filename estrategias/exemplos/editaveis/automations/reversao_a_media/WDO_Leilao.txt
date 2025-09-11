@@ -1,0 +1,90 @@
+Input
+  ptsRecompra(5);
+  qtdRecompra(1);
+  pontosDeGanho(5);
+
+Var
+  bandaSup, bandaInf, mediaMovel       : Float;
+  endGame                              : Boolean;
+  preco, precoEntrada, proximaRecompra : Float;
+  precoMedio                           : Float;
+  contratosAtuais                      : Integer;
+
+Begin
+  // Inicialização
+  bandaSup := BollingerBands(1.4,20,0)|0|;
+  bandaInf := BollingerBands(1.4,20,0)|1|;
+  preco := Fechamento;
+  mediaMovel := Media(20,Fechamento);
+
+  // 1-ENTRADA  
+  if not HasPosition and (position = 0) then
+    begin
+      if endGame = false then
+        begin
+          if preco < bandaInf then
+            begin
+              BuyAtMarket(qtdRecompra);
+              precoEntrada := preco;
+              precoMedio := preco; // Primeiro contrato define o preço médio inicial
+              contratosAtuais := qtdRecompra;
+              proximaRecompra := preco - ptsRecompra;
+            end;
+          if preco > bandaSup then
+            begin
+              SellShortAtMarket(qtdRecompra);
+              precoEntrada := preco;
+              precoMedio := preco;
+              contratosAtuais := qtdRecompra;
+              proximaRecompra := preco + ptsRecompra;
+            end;
+        end;
+    end;
+
+  if HasPosition then
+    begin
+      // RECOMPRA (MÉDIA DO PREÇO)
+      if IsBought and (preco <= proximaRecompra) then
+        begin
+          BuyAtMarket(qtdRecompra);
+          precoMedio := ((precoMedio * contratosAtuais) + (preco * qtdRecompra)) / (contratosAtuais + qtdRecompra);
+          contratosAtuais := contratosAtuais + qtdRecompra;
+          proximaRecompra := proximaRecompra - ptsRecompra;
+        end;
+      if IsSold and (preco >= proximaRecompra) then
+        begin
+          SellShortAtMarket(qtdRecompra);
+          precoMedio := ((precoMedio * contratosAtuais) + (preco * qtdRecompra)) / (contratosAtuais + qtdRecompra);
+          contratosAtuais := contratosAtuais + qtdRecompra;
+          proximaRecompra := proximaRecompra + ptsRecompra;
+        end;
+    end;
+ 
+  // SAÍDA DA OPERAÇÃO - SOMENTE COM LUCRO
+  if HasPosition then
+    begin
+      ConsoleLog("Preço Médio: " + precoMedio);
+      if IsBought and (preco >= mediaMovel) then
+        begin
+          if (preco >= precoMedio + pontosDeGanho) then // Sai apenas com lucro
+            begin
+              ClosePosition;
+              endGame := true;
+            end;
+        end;
+
+      if IsSold and (preco <= mediaMovel) then
+        begin
+          if (preco <= precoMedio - pontosDeGanho) then // Sai apenas com lucro
+            begin
+              ClosePosition;
+              endGame := true;
+            end;
+        end;
+    end;
+
+// Plota a média para visualização
+Plot(bandaSup);
+Plot(mediaMovel);
+Plot(bandaInf);
+End;

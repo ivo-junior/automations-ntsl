@@ -1,0 +1,22 @@
+Input
+
+  Rapida(5);
+  Devagar(34);
+
+var
+
+  Awe : float;
+  hl2 : integer;
+  BB_ : float;
+
+begin
+
+
+  hl2 := floor((HIGH + LOW)/2);
+  Awe := (Media(hl2, Rapida) - Media(hl2, Devagar))*1000;
+  
+  
+  
+   
+  Plot(Awe);
+end;

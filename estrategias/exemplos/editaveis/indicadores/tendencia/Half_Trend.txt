@@ -1,0 +1,107 @@
+// *** Desenvolvido por Alessandro Drese
+// *** Baseado no algoritmo super trend
+
+Input
+Amplitude(3);
+Desvio_Canal(2);
+Mostrar_Canal(False);
+
+var
+cor, trend, nextTrend : integer;
+ht,highPrice,lowPrice,highma,lowma : float;
+maxLowPrice,minHighPrice : float;
+dev,up,down,atr2,atrHigh,atrLow : float;        
+
+function max (v1 : float; v2 : float) : float;
+  begin
+    Result:=0;
+    if v1 >= v2 then 
+      Result := v1
+    else
+      Result := v2;
+  end;
+
+function min (v1 : float; v2 : float) : float;
+  begin
+    Result:=0;
+    if v1 <= v2 then
+      Result := v1
+    else
+      Result := v2;
+  end;
+
+begin
+  up:=up[1];
+  down:=down[1];
+  trend:=trend[1];
+  nextTrend:=nextTrend[1];
+  
+  atr2 := AvgTrueRange(100,0)/2;
+  dev := Desvio_Canal * atr2;
+  
+  highPrice := highest(high,amplitude);
+  lowPrice := lowest(low,amplitude);
+  
+  highma := Media(amplitude,high);
+  lowma := Media(amplitude,low);
+  
+  if nextTrend = 1 then 
+    begin
+      maxLowPrice := max(lowPrice, maxLowPrice);
+      if (highma < maxLowPrice) e (close < low[1]) then
+        begin
+          trend := 1;
+          nextTrend := 0;
+          minHighPrice := highPrice;
+        end;
+    end
+  else
+    begin
+      minHighPrice := min(highPrice, minHighPrice);
+      if (lowma > minHighPrice) e (close > high[1]) then
+        begin
+          trend := 0;
+          NextTrend := 1;
+          maxLowPrice := lowPrice;
+        end;
+    end;
+  
+  if trend = 0 entao
+    begin
+      if trend[1] = 1 then 
+        up := down[1]
+      else 
+        up := maxLowPrice;
+      cor := clLime;
+      atrHigh := up + dev;
+      atrLow := up - dev;
+    end
+  else
+    inicio
+      if trend[1] = 0 then 
+        down := up[1]
+      else 
+        down := minHighPrice;
+      cor := clFuchsia;
+      atrHigh := down + dev;
+      	atrLow := down - dev;
+    end;
+  
+  if trend = 0 then ht := up else ht := down;
+  
+  Plot(ht);
+  
+  if Mostrar_Canal then
+    begin
+      Plot2(atrHigh);
+      Plot3(atrLow);
+    end;
+  
+    SetPlotColor(1, cor);
+    PaintBar(cor);
+end;
+
+
+
+
+

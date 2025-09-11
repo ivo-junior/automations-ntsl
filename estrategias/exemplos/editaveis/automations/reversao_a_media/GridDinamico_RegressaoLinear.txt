@@ -1,0 +1,170 @@
+Input
+RNEC("Dinamic Grid Trade - Canal de Regressão Linear|");
+Contratos(1);
+HorarioInicial(0900);
+HorarioDayTrade(1730);
+GridLines_Max50(10);
+GridSize_emTicks(10);
+ProximosNiveis(3);
+TakeProfitPrimeiraOrdem(20);
+Periodo(100);
+DesvioSuperior(2.0);
+DesvioInferior(2.0);
+
+Var
+EntryPrice : float;
+Compra, Venda, Green, Red : boolean;
+UpDatePrice : boolean;
+TimeOk : boolean;
+LRCcen, LRCsup, LRCinf : float;
+
+Procedure DinamicOrdersGrid(Contratos, GridLines, GridSize, ProximosNiveis, TakeProfitPrimeiraOrdem : integer; EntryPrice : float);
+Var
+  i, j, n, vPosition, vTP_FirstOrder : integer;
+  nGrid, vStop, TakeProfitPrice : float;
+  tick : float;
+  arrGridPrice : array [1..100] of float;  
+  vProximosNiveis : integer;
+
+Begin
+  tick := MinPriceIncrement;  
+  n := 50;
+  vTP_FirstOrder := TakeProfitPrimeiraOrdem - GridSize;
+
+  // Trava para não serem enviadas ordens além do tamanho do Grid 
+  vProximosNiveis := ProximosNiveis;
+  if vProximosNiveis > GridLines then vProximosNiveis := GridLines;
+
+  // Validação para garantir que EntryPrice seja válido
+  if EntryPrice = 0 then 
+  Begin
+    // Não faz nada se o EntryPrice for inválido
+  End
+  Else
+  Begin
+    If IsBought then
+      Begin
+        vPosition := BuyPosition / Contratos;
+        // Calcula os níveis do grid
+        for i := 1 to GridLines + n do 
+          arrGridPrice[i] := (EntryPrice + 2*(GridSize * tick)) - (i * (GridSize * tick));
+        
+        // Define o stop loss
+        vStop := abs(EntryPrice) - (GridSize * (GridLines+1) * Tick);
+
+        // Define o take profit para o primeiro nível
+        TakeProfitPrice := arrGridPrice[1] + (tick * vTP_FirstOrder);
+
+        // Envia ordem de take profit para o primeiro nível
+        SellToCoverLimit(TakeProfitPrice, Contratos);
+
+        // Envia ordens para os próximos níveis baseado na posição atual
+        for j := 1 to vProximosNiveis do
+        Begin
+          if (vPosition + j <= GridLines + n) and (arrGridPrice[vPosition + j + 1] > vStop) then
+            BuyLimit(arrGridPrice[vPosition + j + 1], Contratos);
+        End;
+        
+        // Define as ordens de venda e os stops
+        for i := 1 to (vPosition+1) do
+        Begin                                                                
+          nGrid := arrGridPrice[i+1];
+          SellToCoverLimit(nGrid, Contratos);
+          SellToCoverStop(vStop, vStop, BuyPosition);
+        End;    
+      end;
+    
+    If IsSold then
+      Begin
+        vPosition := SellPosition / Contratos;
+        // Calcula os níveis do grid
+        for i := 1 to GridLines+n do 
+          arrGridPrice[i] := (EntryPrice - 2*(GridSize * tick)) + (i * (GridSize * tick));     
+        
+        // Define o stop loss
+        vStop := abs(EntryPrice) + (GridSize * (GridLines+1) * Tick);
+
+        // Define o take profit para o primeiro nível
+        TakeProfitPrice := arrGridPrice[1] - (tick * vTP_FirstOrder);
+
+        // Envia ordem de take profit para o primeiro nível
+        BuyToCoverLimit(TakeProfitPrice, Contratos);
+
+        // Envia ordens para os próximos níveis baseado na posição atual
+        for j := 1 to vProximosNiveis do
+        Begin
+          if (vPosition + j <= GridLines + n) and (arrGridPrice[vPosition + j + 1] < vStop) then
+            SellShortLimit(arrGridPrice[vPosition + j + 1], Contratos);
+        End;
+        
+        // Define as ordens de compra e os stops
+        for i := 1 to (vPosition) do
+        Begin
+          nGrid := arrGridPrice[i+1];           
+          BuyToCoverLimit(nGrid, Contratos);
+          BuyToCoverStop(vStop, vStop, SellPosition);        
+        End;                          
+      end;
+  End;
+End;
+
+Begin
+ // if CurrentDate < 1250206 then
+    Begin 
+      TimeOk := (time > HorarioInicial) e (time < HorarioDayTrade);
+     
+      LRCcen := LinearRegressionChannel(Periodo,true,DesvioSuperior,true,DesvioInferior);
+      LRCsup := LinearRegressionChannel(Periodo,true,DesvioSuperior,true,DesvioInferior)|1|;
+      LRCinf := LinearRegressionChannel(Periodo,true,DesvioSuperior,true,DesvioInferior)|2|; 
+
+      Green := ((Close[1] < LRCinf) ou (Low < LRCinf)) e (Close > LRCinf); 
+      Red :=  ((Close[1] > LRCsup) ou (High > LRCsup))  e (Close < LRCsup); 
+
+      Compra := not Green[1] e Green;     
+      Venda :=  not Red[1] e Red;
+    
+      if not HasPosition then
+        Begin
+          UpDatePrice := False;
+          if Compra then BuyAtMarket(Contratos);
+          if Venda then SellShortAtMarket(Contratos);
+        end;
+    
+      if HasPosition e TimeOk then
+        Begin
+          if UpDatePrice = false then
+            Begin
+              EntryPrice := abs(Price);
+              UpDatePrice := true;
+            end;
+          DinamicOrdersGrid(Contratos, GridLines_Max50, GridSize_emTicks, ProximosNiveis, TakeProfitPrimeiraOrdem, EntryPrice);
+          if not TimeOk then ClosePosition;
+        end;
+    
+  {    if IsBought then
+        Begin
+          if Venda then
+            Begin
+              ClosePosition;
+              SellShortAtMarket(Contratos);
+            end;
+        end;
+      if isSold then
+        Begin
+          if Compra then
+            Begin
+              ClosePosition;
+              BuyAtMarket(Contratos);
+            end;
+        end;        }
+          
+      if Compra then PaintBar(clLime) else if Venda then PaintBar(255) else PaintBar(clWhite);
+
+      Plot(LRCcen);
+      Plot2(LRCsup);
+      Plot3(LRCinf);
+
+    end;
+end;
+
+

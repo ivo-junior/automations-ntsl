@@ -1,0 +1,29 @@
+var
+
+  _high : float;
+  _low : float;
+  _Avg : float;
+  _Avg_TU : float;
+  _Avg_TD : float;
+
+begin
+
+  _high := HIGHD(1);
+  _low := LOWD(1);
+  _Avg := (_high + _low)/2;
+  _Avg_TU := _Avg + 2200;
+  _Avg_TD := _Avg - 2200;
+  
+  Plot(_Avg);
+
+  if (Close > _Avg) then
+  begin
+    PaintBar(clGreen);
+    Plot2(_Avg_TU);
+  end
+  else
+  begin
+    PaintBar(clRed);
+    Plot3(_Avg_TD);  
+  end; 
+end;

@@ -1,0 +1,58 @@
+var
+  floor_pivot : float;
+  floor_s1 : float;
+  floor_s2 : float;
+  floor_s3 : float;
+
+  floor_r1 : float;
+  floor_r2 : float;
+  floor_r3 : float;
+
+  _high : float;
+  _close : float;
+  _open : float;
+  _low : float;
+begin
+  
+  _low := LOWD(1);
+  _high := HIGHD(1);
+  _close := CLOSED(1);
+  _open := OPEND(1);
+
+  // floor pivots
+  floor_pivot := (_high+_low+_close)/3;
+  floor_s1 := (floor_pivot*2) - _high;
+  floor_s2 := floor_pivot + (_high-_low);
+  floor_s3 := _low + 2*(_high - floor_pivot);
+
+  floor_r1 := (floor_pivot*2) - _low;
+  floor_r2 := floor_pivot + (_high-_low);
+  floor_r3 := _high + 2*(floor_pivot - _low);
+
+
+  // Plotagem
+
+  Plot(floor_pivot);
+  SetPlotColor(1, clRed);
+  SetPlotWidth(1, 2);
+  Plot2(floor_s1);
+  SetPlotColor(2, clRed);
+  SetPlotWidth(2, 2);
+  Plot3(floor_s2);
+  SetPlotColor(3, clRed);
+  SetPlotWidth(3, 2);
+  Plot4(floor_s3);
+  SetPlotColor(4, clRed);
+  SetPlotWidth(4, 2);
+  Plot5(floor_r1);
+  SetPlotColor(5, clRed);
+  SetPlotWidth(5, 2);
+  Plot6(floor_r2);
+  SetPlotColor(6, clRed);
+  SetPlotWidth(6, 2);
+  Plot7(floor_r3);
+  SetPlotColor(7, clRed);
+  SetPlotWidth(7, 2);
+  
+
+end;

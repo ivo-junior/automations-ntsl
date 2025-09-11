@@ -1,0 +1,58 @@
+Var
+    MaiorAlta, MenorBaixa: Float;
+    i: Integer;
+    Quantidade: Integer;
+    SinalCompra, SinalVenda: Boolean;
+    PrecoEntrada: Float;
+    StopLoss, TakeProfit: Float;      // Stop Loss e Take Profit
+Begin
+    // Inicializa parâmetros
+    Quantidade := 1;
+
+    // Inicializa a Maior Alta e Menor Baixa com os últimos 10 candles
+    MaiorAlta := High[1];  
+    MenorBaixa := Low[1];  
+
+    For i := 2 To 10 Do
+    Begin
+        If High[i] > MaiorAlta Then
+            MaiorAlta := High[i];
+
+        If Low[i] < MenorBaixa Then
+            MenorBaixa := Low[i];
+    End;
+
+    // Resetando os sinais
+    SinalCompra := False;
+    SinalVenda := False;
+
+    // **Entrada de Compra - Rompimento da Maior Alta**
+    If (Close > MaiorAlta) And (Open <= MaiorAlta) Then
+    Begin
+        SinalCompra := True;
+        BuyAtMarket(Quantidade);
+        PaintBar(clGreen); // Destaca o candle de compra
+        PrecoEntrada := Close;
+
+        // Define Stops e Alvos
+        StopLoss := PrecoEntrada - 3.0;
+        TakeProfit := PrecoEntrada + 0.5;
+        SellToCoverLimit(TakeProfit, Quantidade);
+        SellToCoverStop(StopLoss, StopLoss - 0.5, Quantidade);
+    End;
+
+    // **Entrada de Venda - Rompimento da Menor Baixa**
+    If (Close < MenorBaixa) And (Open >= MenorBaixa) Then
+    Begin
+        SinalVenda := True;
+        SellShortAtMarket(Quantidade);
+        PaintBar(clRed); // Destaca o candle de venda
+        PrecoEntrada := Close;
+
+        // Define Stops e Alvos
+        StopLoss := PrecoEntrada + 3.0;
+        TakeProfit := PrecoEntrada - 0.5;
+        BuyToCoverLimit(TakeProfit, Quantidade);
+        BuyToCoverStop(StopLoss, StopLoss + 0.5, Quantidade);
+    End;
+End;

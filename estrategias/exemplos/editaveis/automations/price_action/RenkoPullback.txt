@@ -1,0 +1,66 @@
+Input
+
+NumCandlesSequencia(5);
+Alvo(50.00);
+Stop(50.00);
+OffSet(100.00);
+
+Var
+
+FlagC, FlagV, ContP, ContN, i : Inteiro;
+
+SinalC, SinalV : Boolean;
+
+begin
+
+// Gerenciamento de Posição Aberta
+Se IsBought entao
+   Inicio
+     FlagC := 0;
+     ContP := 0;
+     SellToCoverLimit(BuyPrice+Alvo);
+     SellToCoverStop(BuyPrice-Stop, BuyPrice-Stop-Offset);
+   fim;
+
+Se IsSold entao
+   Inicio
+     FlagV := 0;
+     ContN := 0;
+     BuyToCoverLimit(SellPrice-Alvo);
+     BuyToCoverStop(SellPrice+Stop, SellPrice+Stop+Offset);
+   fim;
+
+// Identificação de Sinais de Entrada
+SinalC := (FlagC = 1) e ((Close[2] < Open[2]) e (Close[1] > Open[1]));
+SinalV := (FlagV = 1) e ((Close[2] > Open[2]) e (Close[1] < Open[1]));
+
+// Execução de Ordens (Entrada na Posição) e Pintura dos Candles de Sinal
+Se HasPOsition = False entao
+   Inicio
+     Se SinalC entao
+       Inicio
+         BuyAtMarket;
+         Paintbar(clBlue); // Pinta o candle de compra de azul
+       fim;
+     Se SinalV entao
+       Inicio
+         SellShortAtMarket;
+         Paintbar(clBlue); // Pinta o candle de venda de azul
+       fim;
+   fim;
+
+// Lógica de Contagem de Velas Consecutivas
+// Importante: Close[1] e Open[1] referem-se à vela mais recente fechada.
+// Adapte para Close[0] e Open[0] se sua plataforma usa essa indexação para a vela atual.
+Se (Close[1] > Open[1]) entao ContN := 0; // Se a vela atual é de alta, zera o contador de baixa
+Se (Close[1] < Open[1]) entao ContP := 0; // Se a vela atual é de baixa, zera o contador de alta
+
+// Atualizar contadores
+Se (Close[1] > Open[1]) entao ContP := ContP + 1;
+Se (Close[1] < Open[1]) entao ContN := ContN + 1;
+
+// Ativação de Flags de Sinal
+Se ContP >= NumCandlesSequencia entao Inicio FlagC := 1; FlagV := 0; Fim;
+Se ContN >= NumCandlesSequencia entao Inicio FlagV := 1; FlagC := 0; Fim;
+
+end;

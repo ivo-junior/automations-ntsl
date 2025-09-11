@@ -1,0 +1,26 @@
+Input
+
+  Periodo_RSI(14);
+  SF(5);
+  Oscilador_QQE(4.238);
+  Limite_Threshold(10);
+
+var
+
+  src : float;
+  Wilders_Periodo : integer;
+  Rsi_ : float;
+  RsiMa_ : float;
+  AtrRsi : float;
+  MaAtrRsi : float;
+  dar : float;
+
+begin
+  
+  src := FECHAMENTO;
+  Wilders_Periodo := (Periodo_RSI * 2) - 1;
+
+  Rsi_ := rsi(Periodo_RSI, 0);
+  
+
+end;

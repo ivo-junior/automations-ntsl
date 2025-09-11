@@ -1,0 +1,45 @@
+Parametro
+
+  Periodo(2);
+
+Var
+
+  MVol : Real;
+  MAbre : Real;
+  MFecha : Real;
+  MSpread : Real;
+
+begin
+
+Mvol := Media(Periodo, Volume);
+MAbre := Media(Periodo, Abertura);
+MFecha := Media(Periodo, Fechamento);
+MSpread := Abs(MFecha - MAbre);
+  
+      // Correspondência - Cl Vermelho - Baixo Volume, Candle pequeno
+    Se (((FECHAMENTO[0]-ABERTURA[0]) < MSpread) e ((FECHAMENTO[0]-ABERTURA[0]) > -MSpread)) e (FinancialVol(false) <= Mvol) entao
+      PaintBar(ClVermelho);
+      
+      // Anomalia - Cl Amarelo - Alto Volume, Candle pequeno - Batalha de mercado. A depender da posição do gráfico, pode ser:
+      
+      // 1 = Movimento de tendência está segurando a tendência
+      // e há uma força oposta para reverter esta tendência, mas esta força é mais fraca;
+      
+      // 2 = A tendência chegou num ponto de clímax, seja de alta (shooting star) ou de baixa (hammer/martelo) e
+      // há uma força incessante para reverter esta tendência, resultando em candles pequenos
+      // de sombras longas e várias tentativas frustadas de quebrar uma resistência (climax de alta) ou suporte (climax de baixa).
+    Se (((FECHAMENTO[0]-ABERTURA[0]) < MSpread) e ((FECHAMENTO[0]-ABERTURA[0]) > -MSpread)) e (FinancialVol(false) > Mvol) entao
+      PaintBar(ClAmarelo);
+
+      // Correspondência - Cl Verde - Alto Volume, Candle grande
+    Se (((FECHAMENTO[0]-ABERTURA[0]) >= MSpread) ou ((FECHAMENTO[0]-ABERTURA[0]) <= -MSpread)) e (FinancialVol(false) > Mvol) entao
+      PaintBar(ClVerde);
+
+      // Anomalia - Cl Azul - Baixo Volume, Candle Grande - Armadilha de mercado, poucos players com muito poder, testando preços.
+    Se (((FECHAMENTO[0]-ABERTURA[0]) >= MSpread) ou ((FECHAMENTO[0]-ABERTURA[0]) <= -MSpread)) e (FinancialVol(false) <= Mvol) entao
+      PaintBar(ClAzul);
+
+
+     
+    
+end;

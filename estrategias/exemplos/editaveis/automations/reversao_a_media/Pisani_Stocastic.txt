@@ -1,0 +1,369 @@
+//######################################################################
+//
+// ---------------------- DADOS DA ESTRATÉGIA ----------------------------
+// -----------------------------------------------------------------------
+//
+// NOME DA ESTRATÉGIA: BANDAS PISANI + VWAPBAND + RSI + MEDIA 200 
+// DESENVOLVIDA POR: Marcos Ferreira 
+// DATA DE CRIAÇÃO: 01/10/2024 
+ 
+// 
+//VERSÃO: 1.1 
+//ATUALIZADA EM: 31/10/2024  
+// TIPO DE ESTRATÉGIA: (x) Indicador (X) Coloração (X) Execução 
+ 
+//() Screening () Texto ( ) Alarme 
+// DESCRIÇÃO DA ESTRATÉGIA: 
+// Estratégia baseada em BANDS PISANI + VWAP BANDS + RSI E MM200 
+
+// ATIVO BASE : WIN ( PARA OUTROS ATIVOS ADEQUAR CONDIÇÕES )
+ 
+// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
+
+ 
+//############# FIM DO CABEÇALHO ########## 
+
+//##################DISSERTAÇÃO DOS PARAMETROS##############
+//Horario de operação: das 10h00 as 15h30
+//1 - ROMPER BANDS_PISANI ( QUANDO ROMPER A BANDA, ACIONA O GATILHO PRINCIPAL E TEM QUE AGUARDAR VOLTAR PARA A BANDA E INICIAR O PROXIMO CANDLE E ESTE TEM Q ESTAR PELO MENOS 60% DENTRO DA BANDA) 
+//2 - ROMPER OU ENCOSTAR NA VWAP_BANDS ( QUALQUER UMA DAS 3 MAIS CADA UMA QUE ROMPER, DA MAIS FORÇA A ENTRADA ) DA MAIS PESO PARA A OPERAÇÃO 
+//3 - RSI AGREDINDO O 30 OU 70 ( CONDIÇÃO ).. QUANDO MAIS AGREDIDO MAIS FORTE SERA A CONFIRMAÇÃO) 
+//4 - MM200 PROXIMA ( OU ENCOSTADA ) NO SENTIDO DO TRADE ( DA MAIS PESO PARA ENTRADA DA OPERAÇÃO ) 
+//
+//
+//## Candle de Alta - Pintar o candle de Verde .
+//## Candle de Baixa - Pintar o candle de Vermelho escuro.
+//
+//## Candle de compra -  Pintar o candle de Verde Limão
+//## Candle de venda - Pintar o candle de Vermelho
+//
+//## Candle de Alerta Pisani -  compra(1) - Pintar o candle de Amarelo
+//## Candle de Alerta Pisani -  venda(1) - Pintar o candle de Magenta
+//
+//## Peso 1 ( 1,2,3,4 ) ( Positivo )  - Pintar o candle de Azul Celeste. 
+//## Peso 2 ( 1,2,3 )   ( Positivo )  - Pintar o candle de Verde Oliva .
+//## Peso 3 ( 1,2,4 )   ( Positivo )  - Pintar o candle de Azul.
+//## Peso 4 ( 1,3,4 )   ( Positivo )  - Pintar o candle de Azul Brilhante.
+//## Peso 1 ( 1,2,3,4 ) ( negativo )  - Pintar o candle de Laranja.
+//## Peso 2 ( 1,2,3)    ( negativo )  - Pintar o candle de light wood .
+//## Peso 3 ( 1,2,4)    ( negativo )  - Pintar o candle de orquidea.
+//## Peso 4 ( 1,3,4)    ( negativo )  - Pintar o candle de Violeta Vermelho Médio.
+
+//Condições para ativar a compra:
+//     Condição 1  ( positivo )  - Bandas Pisani
+//Entrada:
+//      Condições para ativação de compra
+//Saida:
+//Parcial 1 = 60%  ( 100 pontos )
+//Parcial 2 = 20%  ( 150 pontos )
+//Parcial 3 = 20%  ( 250 pontos )
+//TraillingStop: ativa em 50 pontos ajustar -50 da entrada
+//      Stop de segurança conforme tabela pontos abaixo:
+//      6 PONTOS (wdo)      125 pontos (win)        
+//
+//Condições para ativar a venda:
+//      Condição 1  ( negativo )  - Bandas Pisani 
+//Entrada:
+//.    Condições de ativação de venda
+//Saida:
+//Parcial 1 = 60%  ( 100 pontos )
+//Parcial 2 = 20%  ( 150 pontos )
+//Parcial 3 = 20%     ( 250 pontos )
+//TraillingStop: ativa em 50 pontos ajustar 50 da entrada
+//      Stop de segurança conforme tabela pontos abaixo:
+//      6 PONTOS (wdo)      125 pontos (win)  
+
+//
+//##########################################################################
+
+
+// NOTAS: 
+// a. No stop foi utilizado a estratégia offset(stop de segurança) de 6 pontos.
+// b. Os parametros podem ser ajustados através da edição de estrategias do Profit.
+// C. Condições baseadas em: Win
+
+
+Input
+
+Periodo(20);
+Per_med_vh(1);
+PorcentagemVH(20);
+PeriodoVH(20);
+
+vwapPeriod(1); // 1 dia  
+VwapPerc(0.3333); // 33,33% ( 100%/3 bandas) 
+
+
+FastAverage(199);
+SlowAverage(201);
+Stop(125);  //----------->> offset ajustável conforme ativo
+TraillingStop(True);
+Gainstart(50);
+BreakEven(-50);
+SizeProtect(-50);
+Alvo1(100);       //Pontuação para Alvo 1
+Alvo2(150);       //Pontuação para Alvo 2
+Alvo3(250);       //Pontuação para Alvo 3
+NContTtl(4);     //Numero Toral de contratos de Compra 
+NParcial1(2);     //Numero de contratos da Parcial 1
+NParcial2(1);     //Numero de contratos da Parcial 2
+NParcial3(1);     //Numero de contratos da Parcial 3
+
+
+Var
+
+bPisani      : Float;
+BPisaniSUP, BPisaniSUPB, BPisaniINF , BPisaniINF , BPisaniINFTag , BPisaniSUPTag, BPisaniSUPBlock, BPisaniINFBlock: Float;
+VwapD, Vwap1, Vwap2, Vwap3, VwapN1, VwapN2 , VwapN3 : Float;
+xRSI         : Float;
+xStoc        : Float;
+Media180     : Float;
+Media200     : Float;
+sAvgFast     : Float;
+sAvgSlow     : Float;
+sPrevAvgFast : Float;
+sPrevAvgSlow : Float;
+SinalC, SinalC1, SinalC2, SinalC3 , SinalC4 , SinalC5, SinalCB , SinalCX       : Boolean;
+SinalV, SinalV1, SinalV2, SinalV3 , SinalV4 , SinalV5, SinalVB , SinalVX   : Boolean;
+Peso1C, Peso2C, Peso3C, Peso1V, Peso2V, Peso3V  : Float;
+StopC        : Boolean;
+StopV        : Boolean;
+StopMC,StopMV, StopGainMC2 , StopGainMV2 , StopGainMC3 , StopGainMV3       : Boolean;
+cor          : integer;
+Vh           : Float;
+AlertPisInf, AlertPisSup, AlertaBlockPisInf, AlertaBlockPisSup  : Boolean;
+fPrecoStop : Boolean;
+PrecoEntradaCompra : Float;
+PrecoEntradaVenda : Float;
+     
+
+begin
+//if (time > 1000) e (Time < 1600) then
+
+//Bandas_Pisani
+  
+bPisani := (Media(Periodo,close));
+BPisaniSUP := (Media(Periodo,close)+Media(Periodo,close)*HistVolatility(PeriodoVH,0)/100*PorcentagemVH/100);
+BPisaniINF := (Media(Periodo,close)-Media(Periodo,close)*HistVolatility(PeriodoVH,0)/100*PorcentagemVH/100); 
+
+BPisaniSUPTag := (Media(Periodo,close)+Media(Periodo,close)*HistVolatility(PeriodoVH,0)/110*PorcentagemVH/110);
+BPisaniINFTag := (Media(Periodo,close)-Media(Periodo,close)*HistVolatility(PeriodoVH,0)/110*PorcentagemVH/110);  
+
+BPisaniSUPBlock := (Media(Periodo,close)+Media(Periodo,close)*HistVolatility(PeriodoVH,0)/130*PorcentagemVH/140);
+BPisaniINFBlock := (Media(Periodo,close)-Media(Periodo,close)*HistVolatility(PeriodoVH,0)/130*PorcentagemVH/140);  
+
+
+//vWAPBands
+
+VwapD:= VWAP(1);                                /// Azul Bebe espessura 3
+
+Vwap1:= Vwap(1)+(Vwap(1)*VwapPerc*1)/100;        /// Vermelha espessura 3 
+Vwap2:= Vwap(1)+(Vwap(1)*VwapPerc*2)/100;        /// Vermelha espessura 2 
+Vwap3:= Vwap(1)+(Vwap(1)*VwapPerc*3)/100;        /// Vermelha espessura 1 
+VwapN1:= Vwap(1)-(Vwap(1)*VwapPerc*1)/100;       /// Verde espessura 3 
+VwapN2:= Vwap(1)-(Vwap(1)*VwapPerc*2)/100;       /// Verde espessura 2
+VwapN3:= Vwap(1)-(Vwap(1)*VwapPerc*3)/100;       /// Verde espessura 1
+
+//RSI
+xRSI := RSI(9,1);
+
+xStoc := FastStochastic(5) ;
+
+Media200 := Media(200,close);
+Media180 := Media(180,close);
+
+// Armazena os valores das médias em variáveis de apoio
+sAvgFast     := Media(FastAverage, Close);
+sAvgSlow     := Media(SlowAverage, Close);
+sPrevAvgFast := sAvgFast[1];
+sPrevAvgSlow := sAvgSlow[1];
+
+//Armazena os dados para stop movel
+StopMC := (Close[0]>BuyPrice+Gainstart);
+StopMV := (Close[0]<SellPrice-Gainstart);
+StopGainMC2 := (Close[0]>BuyPrice+Alvo2);
+StopGainMV2 := (Close[0]>SellPrice-Alvo2);
+StopGainMC3 := (Close[0]>BuyPrice+Alvo3);
+StopGainMV3 := (Close[0]>SellPrice-Alvo3);
+
+//SinalC :=  (low < BPisaniINFTag) and (CurrentBar >= BPisaniINFTag) ;//and ( close > open );
+//SinalV :=  (high > BPisaniSUPTag) and (CurrentBar <= BPisaniSUPTag);//and ( close < open );
+
+SinalCX :=  ((low[2] < open[2]) and (high[1] > open[1]) and (low[1] < BPisaniINF) and (close[1] > BPisaniINF)) ;   //and (open[0] >= BPisaniINFTag));
+SinalVX :=  ((high[2] > open[2]) and (low[1] < open[1]) and (High[1] > BPisaniSUP) and (close[1] < BPisaniSUP)) ;  // and (open[0] <= BPisaniSUPTag));
+
+
+if (low < BPisaniINFTag) and (high >= BPisaniINFTag) and (PrecoEntradaCompra = 0.0)then 
+    PrecoEntradaCompra := BPisaniINFTag;
+    SinalC := True ;
+
+if (high > BPisaniSUPTag) and (Low >= BPisaniSUPTag) and (PrecoEntradaVenda = 0.0)then 
+    PrecoEntradaVenda := BPisaniSUPTag;
+    SinalV := True ;
+
+//Modelo I de entrada (atendendo Pisani Bands)
+
+AlertPisInf  := (low < BPisaniINF) and (open > BPisaniINF) ;
+AlertaBlockPisInf := (open < BPisaniINFBlock);
+SinalC1 := (low < BPisaniINF);
+SinalC2 := (high > Vwap1) and (close > Vwap1);
+SinalC3 := (xRSI >= 30);
+SinalC4 := (close > open) and (FastAverage < SlowAverage) ;
+SinalC5 := (xStoc >= 40);
+
+AlertPisSup  := (high > BPisaniSUP) and (open < BPisaniSUP);
+AlertaBlockPisSup := ( open > BPisaniSUPBlock);
+SinalV1 := (high > BPisaniSUP) ;
+SinalV2 := (low < Vwap1) and (close < Vwap1);
+SinalV3 := (xRSI <= 50);
+SinalV4 := (close < open) and (SlowAverage > FastAverage) ;
+SinalV5 := (xStoc <= 60);
+
+begin
+
+if HasPosition = false then 
+
+if (SinalC = True) and (SinalCX) and (SinalC5) and (AlertaBlockPisInf) then BuyAtMarket;
+if (SinalV = True) and (SinalVX) and (SinalV5) and (AlertaBlockPisSup) then SellShortAtMarket ;
+
+
+if (IsBought) then SellToCoverStop (BuyPrice-Stop);
+if (IsSold) then BuyToCoverStop (SellPrice+Stop);
+
+//COLORAÇÃO
+
+// ATIVAR OPERAÇÃO
+
+if (SinalC = True) and (SinalCX) and (SinalC3) and (AlertaBlockPisInf) then
+Paintbar(RGB(50,205,50)) // Verde Limão
+else
+if (SinalV = True) and (SinalVX) and (SinalV3) and (AlertaBlockPisSup) then
+Paintbar(RGB(255,0,0));  // Vermelho
+
+//if  (SinalCX) then  
+//Paintbar(RGB(107,142,35)) // Verde Oliva
+//else
+//if (SinalVX) then 
+//Paintbar(RGB(139,0,0));  // Vermelho Escuro
+
+//AlertPis
+//if (AlertPisInf) then 
+//Paintbar(RGB(255, 255, 0)) // amarelo
+//else
+//if (AlertPisSup) then
+//Paintbar(RGB(255,0,255)) ;// Magenta
+
+//SinalC1 e SinalV1
+//if (SinalC1) then 
+//Paintbar(RGB(255, 255, 0)) // amarelo
+//else
+//if (SinalV1) then
+//Paintbar(RGB(255,0,255)) ;// Magenta
+
+
+//PESO1
+//if (not SinalC) and (not SinalC1) and (SinalC2) and (SinalC3) and (SinalC4) then  
+//Paintbar(RGB(50,153,204))  // Azul Celeste
+//else if (not SinalV) and (not SinalV1) and (SinalV2) and (SinalV3) and (SinalV4) then 
+//Paintbar(RGB(255,165,0)); // Laranja
+//else
+ 
+//PESO2
+//if (not SinalC) and (not SinalC1) and (SinalC2) and (SinalC3) then 
+//Paintbar(RGB(79,79,47)) // Verde Oliva
+//else if (not SinalV) and (not SinalV1) and (SinalV2) and (SinalV3) then 
+//Paintbar(RGB(233,194,166)); // Light wood
+//else
+
+//PESO3
+//if (not SinalC) and (not SinalC1) and (SinalC2) and (SinalC4) then  
+//Paintbar(RGB(0,0,255)) // Azul
+//else if (not SinalV) and (not SinalV1) and (SinalV2) and (SinalV4) then   
+//Paintbar(RGB(153,50,205)); // Orquidea
+//else 
+
+//PESO4
+//if (not SinalC) and (not SinalC1) and (SinalC3) and (SinalC4) then  
+//Paintbar(RGB(192,217,217)); // Azul Brilhante
+//else if (not SinalV) and (not SinalV1) and (SinalV3) and (SinalV4) then   
+//Paintbar(RGB(219,112,147)); // Violeta Vermelho Médio
+//else 
+
+//PESO - teste
+//if (not SinalC1) and (SinalC4)  then  
+//Paintbar(RGB(255, 255, 0)) // amarelo
+//else if (not SinalV1) and (SinalV4)  then   
+//Paintbar(RGB(153,50,205)); // Orquidea
+//else 
+
+//else if Paintbar(RGB(255,255,255)); // Branco
+
+Plot(vwapD);
+SetPlotColor(1, RGB(84,174,236));   //azul bebe
+SetPlotWidth(1, 3);
+Plot2(Vwap1);
+SetPlotColor(2, RGB(255,0,0));   //vermelha
+SetPlotWidth(2, 3);
+Plot3(Vwap2);
+SetPlotColor(3, RGB(255,0,0));   //vermelha
+SetPlotWidth(3, 2);
+Plot4(Vwap3);
+SetPlotColor(4, RGB(255,0,0));   //vermelha
+SetPlotWidth(4, 1);
+
+Plot5(VwapN1);
+SetPlotColor(5, RGB(0,128,0));   // Verde 
+SetPlotWidth(5, 3);
+Plot6(VwapN2);
+SetPlotColor(6, RGB(0,128,0));   // Verde 
+SetPlotWidth(6, 2);
+Plot7(VwapN3);
+SetPlotColor(7, RGB(0,128,0));   // Verde 
+SetPlotWidth(7, 1);
+
+Plot8(bPisani);
+SetPlotColor(8, RGB(0, 0, 255)); // azul
+SetPlotStyle(8, 0);              
+SetPlotWidth(8, 3); 
+Plot9(BPisaniSUP);
+SetPlotColor(9, RGB(0,0,255)); // azul
+SetPlotStyle(9, 2);
+SetPlotWidth(9, 3); 
+Plot10(BPisaniINF) ;
+SetPlotColor(10, RGB(0, 0, 255)); // azul
+SetPlotStyle(10, 2);
+SetPlotWidth(10, 3); 
+Plot11(BPisaniSUPTag);
+SetPlotColor(11, RGB(255,165,0)); // Laranja
+SetPlotStyle(11, 1);
+SetPlotWidth(11, 1); 
+Plot12(BPisaniINFTag) ;
+SetPlotColor(12, RGB(255,165,0)); // Laranja
+SetPlotStyle(12, 1);
+SetPlotWidth(12, 1);
+Plot13(BPisaniSUPBlock) ;
+SetPlotColor(13, RGB(255,165,0)); // Laranja
+SetPlotStyle(13, 1);
+SetPlotWidth(13, 1);
+Plot14(BPisaniINFBlock) ;
+SetPlotColor(14, RGB(255,165,0)); // Laranja
+SetPlotStyle(14, 1);
+SetPlotWidth(14, 1);   
+
+
+Plot15(Media200);
+SetPlotColor(15, RGB(255, 255, 0));   // amarelo
+SetPlotStyle(15, 3);                 //tracejada longa e curta
+SetPlotWidth(15, 3);                 //espessura
+
+Plot16(xRSI);
+SetPlotColor(16, RGB(77,77,255));   // Azul Neon
+
+
+
+end;
+
+
+end;

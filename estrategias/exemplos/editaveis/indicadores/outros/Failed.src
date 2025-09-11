@@ -1,0 +1,69 @@
+Input
+
+  Periodo(34);
+
+var
+
+  maior : float;
+  menor : float;
+  tw : float;
+  bw : float;
+  body : float;
+  _rate_condT : float;
+  _rate_condF : float;
+  cond : boolean;
+  volup : float;
+  voldown : float;
+  rating : float;
+  Desvio_Superior : integer;
+  VolInt : integer;
+
+begin
+
+  maior := 0.0;
+  menor := 0.0;
+  cond := true;
+
+  if OPEN > CLOSE then
+  begin
+    maior := OPEN;
+  end
+  else if OPEN < CLOSE then
+  begin
+    maior := CLOSE;
+  end;
+  
+  if OPEN < CLOSE then
+  begin
+    menor := OPEN;
+  end
+  else if OPEN > CLOSE then
+  begin
+    menor := CLOSE;
+  end;
+
+  if OPEN <= CLOSE then
+  begin
+    cond := true;
+  end
+  else if OPEN <= CLOSE then
+  begin
+    cond := false;
+  end;
+
+  tw := HIGH - maior;
+  bw := menor - LOW;
+  body := Abs(CLOSE - OPEN);
+
+  _rate_condT := 0.5 * (tw + bw + 2 * body) / (tw + bw + body);
+  _rate_condF := 0.5 * (tw + bw + 0) / (tw + bw + body);
+
+
+  volup := volume * _rate_condT;
+  voldown := volume * _rate_condF;
+
+  Desvio_Superior := floor(volup - voldown);
+
+  rating := 
+
+end;
