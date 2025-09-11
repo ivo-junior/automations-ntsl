@@ -1,0 +1,476 @@
+{===============================
+ ROBÔ DAY TRADE PRO (NTSL / PROFIT)
+ - Estratégias: Cash Bands + VWAP com Confluência
+ - Versão: 2.6 Pro (Correção de sintaxe de string)
+===============================}
+
+Input
+  // -------- IDENTIFICAÇÃO --------
+  numeroMagico(502);
+  estrategia("CONFLUENCE"); // CASH, VWAP ou CONFLUENCE
+
+  // -------- CUSTOS (B3) --------
+  usarCustos(True);
+  custoPorContrato(0.30);
+
+  // -------- METAS FINANCEIRAS (Diárias) --------
+  lucroMaxDia(300.0);
+  perdaMaxDia(200.0);
+  
+  // -------- META MÍNIMA DE LUCRO DO DIA --------
+  usarMetaMinLucro(True);
+  gatilhoLucroDia(150.0);
+  percProtegido(25.0);
+
+  // -------- HORÁRIOS OTIMIZADOS --------
+  usarJanelaHoraria(True);
+  horaInicio(10);
+  horaFim(15); // Evita leilão
+  zeragemForcada(True);
+  horaZeragem(15);
+  
+  // -------- HORÁRIO DE MAIOR VOLATILIDADE --------
+  usarJanelaVolatil(True);
+  horaVolatilInicio(14);
+  horaVolatilFim(15);
+  reduzirExposicaoVolatil(True);
+
+  // -------- GESTÃO DE POSIÇÃO AVANÇADA --------
+  contratosPrimeira(1);
+  contratosMaximos(3);
+  escalonamento(True);
+  distanciaEscalon(15.0); // pontos
+  maxTradesDia(15);
+
+  // -------- CASH BANDS (Melhorado) --------
+  emaCurta(9);
+  emaLonga(21);
+  atrLen(14);
+  duoAtrLen(24);
+  fatorBandaATR(1.2); // Mais conservador
+  maxDistMedias(300.0); // Reduzido
+  cashZerarSeCruzou(True);
+  
+  // -------- VWAP BANDS (Melhorado) --------
+  vwapDesvioPct(0.25); // Mais seletivo
+  vwapSaidaCruzamento(True);
+  
+  // -------- CONFLUÊNCIA (NOVO) --------
+  usarConfluencia(True);
+  minConfluencias(2); // Cash + VWAP ou outros
+  
+  // -------- FILTROS DE VOLUME (NOVO) --------
+  filtroVolumeAtivado(True);
+  volumeMinimo(1.5); // Multiplicador da média
+  volumePeriodos(20);
+  
+  // -------- GESTÃO DE RISCO TRADICIONAL --------
+  usarStopLoss(True);
+  stopLossFixo(50.0); // pontos
+  usarStopGain(True);
+  stopGainFixo(80.0); // pontos
+  usarTrailingStop(True);
+  trailingInicio(40.0);
+  trailingPasso(5.0);
+
+  // -------- PROTEÇÃO ANTI-SPIKE (Melhorado) --------
+  elefanteATRmult(2.5); // Mais restritivo
+  spikeATRmult(2.0);
+  spikeBloqueioBars(5); // Maior período
+  
+  // -------- FILTRO DE SPREAD --------
+  maxSpreadPontos(3.0);
+
+Var
+  // --- Variáveis de Estado Global ---
+  diaPnLLiq, picoLucroDia: Float;
+  tradesHoje, ultimoDia, spikeBlockCount: Integer;
+  bloqueadoDia, posicaoAberta: Boolean;
+  precoEntrada, stopLossPreco, stopGainPreco, trailingPreco: Float;
+  contratosAtual: Integer;
+
+  // --- Variáveis de Bloco Principal ---
+  H: integer;
+  violouMeta: Boolean;
+  atrSpike, baseAtrSpike: Float;
+  novoTrailing: Float;
+  eC, eL: Float;
+  v: Float;
+  podeEntrar: Boolean;
+  sinal, cashSinal, vwapSinal, rsiSinal, confluenciaSinal: Integer;
+  distancia: Float;
+
+// ======== FUNÇÕES PURAS DE CÁLCULO E SINALIZAÇÃO ========
+
+function DentroJanelaOp(pUsarJanela: Boolean; pInicio: Integer; pFim: Integer): Boolean;
+var
+  hLocal: Integer;
+begin
+  if (not pUsarJanela) then
+    Result := True
+  else
+  begin
+    hLocal := floor(Time / 100);
+    Result := (hLocal >= pInicio) and (hLocal < pFim);
+  end;
+end;
+
+function DentroJanelaVolatil(pUsarJanela: Boolean; pInicio: Integer; pFim: Integer): Boolean;
+var
+  hLocal: Integer;
+begin
+  if (not pUsarJanela) then
+    Result := False
+  else
+  begin
+    hLocal := floor(Time / 100);
+    Result := (hLocal >= pInicio) and (hLocal < pFim);
+  end;
+end;
+
+function FiltroVolume(pAtivado: Boolean; pPeriodos: Integer; pVolMin: Float): Boolean;
+var
+  volMedio: Float;
+begin
+  if (not pAtivado) then
+    Result := True
+  else
+  begin
+    volMedio := Media(pPeriodos, Volume);
+    if (volMedio > 0) then
+      Result := Volume >= (volMedio * pVolMin)
+    else
+      Result := True;
+  end;
+end;
+
+function FiltroSpread(pMaxSpread: Float): Boolean;
+var
+  spread: Float;
+begin
+  spread := AskPrice - BidPrice;
+  Result := spread <= pMaxSpread;
+end;
+
+function SinalCash(pEmaCurta: Integer; pEmaLonga: Integer; pMaxDist: Float; pAtrLen: Integer; pFatorAtr: Float): Integer;
+var
+  sinalEC, sinalEL, sinalAtr, sinalBandaSup, sinalBandaInf: Float;
+begin
+  sinalEC := MediaExp(pEmaCurta, Close);
+  sinalEL := MediaExp(pEmaLonga, Close);
+
+  if Abs(sinalEC - sinalEL) >= pMaxDist then
+    Result := 0
+  else
+  begin
+    sinalAtr := AvgTrueRange(pAtrLen, 2);
+    sinalBandaSup := sinalEL + pFatorAtr * sinalAtr;
+    sinalBandaInf := sinalEL - pFatorAtr * sinalAtr;
+
+    if (sinalEC > sinalEL) and (Low <= sinalBandaInf) and (Close > sinalBandaInf) then 
+      Result := 1
+    else if (sinalEC < sinalEL) and (High >= sinalBandaSup) and (Close < sinalBandaSup) then 
+      Result := -1
+    else 
+      Result := 0;
+  end;
+end;
+
+function SinalVWAP(pDesvioPct: Float): Integer;
+var
+  sinalV, sinalDesv: Float;
+begin
+  sinalV := VWAP(1);
+  sinalDesv := sinalV * (pDesvioPct / 100.0);
+
+  if (Close < sinalV - sinalDesv) and (Close > Low) then 
+    Result := 1
+  else if (Close > sinalV + sinalDesv) and (Close < High) then 
+    Result := -1
+  else 
+    Result := 0;
+end;
+
+function SinalRSI: Integer;
+var
+  valRSI: Float;
+begin
+  valRSI := RSI(14, 0);
+  
+  if (valRSI < 30) and (valRSI > valRSI[1]) then 
+    Result := 1
+  else if (valRSI > 70) and (valRSI < valRSI[1]) then 
+    Result := -1
+  else 
+    Result := 0;
+end;
+
+function GeraConfluencia(pMinConfluencias: Integer; pCashSinal: Integer; pVwapSinal: Integer; pRsiSinal: Integer): Integer;
+var
+  confluencias: Integer;
+begin
+  confluencias := 0;
+  if (pCashSinal = 1) then confluencias := confluencias + 1;
+  if (pVwapSinal = 1) then confluencias := confluencias + 1;
+  if (pRsiSinal = 1) then confluencias := confluencias + 1;
+  
+  if (confluencias >= pMinConfluencias) then
+    Result := 1
+  else
+  begin
+    confluencias := 0;
+    if (pCashSinal = -1) then confluencias := confluencias + 1;
+    if (pVwapSinal = -1) then confluencias := confluencias + 1;
+    if (pRsiSinal = -1) then confluencias := confluencias + 1;
+    
+    if (confluencias >= pMinConfluencias) then
+      Result := -1
+    else
+      Result := 0;
+  end;
+end;
+
+function VerificarStops(pPosAberta: Boolean; pPosicao: Integer; pUsarSL: Boolean; pSLPreco: Float; pUsarSG: Boolean; pSGPreco: Float; pUsarTS: Boolean; pTSPreco: Float): Boolean;
+begin
+  Result := False;
+  if (pPosAberta) then
+  begin
+    if (pPosicao > 0) then
+    begin
+      if (pUsarSL and (Close <= pSLPreco)) then Result := True
+      else if (pUsarSG and (Close >= pSGPreco)) then Result := True
+      else if (pUsarTS and (Close <= pTSPreco)) then Result := True;
+    end
+    else if (pPosicao < 0) then
+    begin
+      if (pUsarSL and (Close >= pSLPreco)) then Result := True
+      else if (pUsarSG and (Close <= pSGPreco)) then Result := True
+      else if (pUsarTS and (Close >= pTSPreco)) then Result := True;
+    end;
+  end;
+end;
+
+function CandleElefante(pAtrLen: Integer; pElefanteMult: Float; pVolPeriodos: Integer): Boolean;
+var
+  tr, atr, volRatio, volMedio: Float;
+begin
+  tr := High - Low;
+  atr := AvgTrueRange(pAtrLen, 2);
+  
+  volMedio := Media(pVolPeriodos, Volume);
+  if (volMedio > 0) then
+    volRatio := Volume / volMedio
+  else
+    volRatio := 0;
+  
+  if (atr > 0) then
+    Result := (tr >= (pElefanteMult * atr)) and (volRatio > 2.0)
+  else
+    Result := False;
+end;
+
+function ViolouMetaMinima(pUsarMeta: Boolean; pPnlLiq: Float; pGatilho: Float; pPico: Float; pPerc: Float): Boolean;
+var
+  minimo: Float;
+begin
+  if (not pUsarMeta) or (pPnlLiq < pGatilho) then
+    Result := False
+  else
+  begin
+    minimo := pPico * (1.0 - (pPerc/100.0));
+    Result := (pPnlLiq <= minimo);
+  end;
+end;
+
+
+// ======== LOOP PRINCIPAL ========
+begin
+  if (Date <> ultimoDia) then
+  begin
+    diaPnLLiq := 0.0;
+    picoLucroDia := 0.0;
+    tradesHoje := 0;
+    ultimoDia := Date;
+    bloqueadoDia := False;
+    spikeBlockCount := 0;
+    posicaoAberta := False;
+    precoEntrada := 0.0;
+    stopLossPreco := 0.0;
+    stopGainPreco := 0.0;
+    trailingPreco := 0.0;
+    contratosAtual := 0;
+  end;
+
+  H := floor(Time / 100);
+  if (zeragemForcada) and (H >= horaZeragem) and (Position() <> 0) then
+  begin
+    ClosePosition();
+    posicaoAberta := False;
+  end;
+
+  diaPnLLiq := DailyResult(false);
+  if (diaPnLLiq > picoLucroDia) then
+    picoLucroDia := diaPnLLiq;
+
+  if (not bloqueadoDia) then
+  begin
+    violouMeta := ViolouMetaMinima(usarMetaMinLucro, diaPnLLiq, gatilhoLucroDia, picoLucroDia, percProtegido);
+    if ((lucroMaxDia > 0) and (diaPnLLiq >= lucroMaxDia)) or
+       ((perdaMaxDia > 0) and (-diaPnLLiq >= perdaMaxDia)) or
+       (violouMeta) then
+    begin
+      bloqueadoDia := True;
+      if Position() <> 0 then ClosePosition();
+    end;
+  end;
+
+  if (Position() = 0) then
+    posicaoAberta := False
+  else
+    contratosAtual := Abs(Position());
+
+  atrSpike := AvgTrueRange(atrLen, 2);
+  baseAtrSpike := AvgTrueRange(duoAtrLen, 2);
+  if (baseAtrSpike > 0) and (atrSpike >= spikeATRmult * baseAtrSpike) then
+    spikeBlockCount := spikeBloqueioBars
+  else if (spikeBlockCount > 0) then
+    spikeBlockCount := spikeBlockCount - 1;
+  
+  if (usarTrailingStop) and (posicaoAberta) then
+  begin
+    if (Position() > 0) then
+    begin
+      if (Close >= precoEntrada + trailingInicio) then
+      begin
+        novoTrailing := Close - stopLossFixo;
+        if (novoTrailing > trailingPreco) then
+          trailingPreco := novoTrailing;
+      end;
+    end
+    else if (Position() < 0) then
+    begin
+      if (Close <= precoEntrada - trailingInicio) then
+      begin
+        novoTrailing := Close + stopLossFixo;
+        if (novoTrailing < trailingPreco) then
+          trailingPreco := novoTrailing;
+      end;
+    end;
+  end;
+
+  if VerificarStops(posicaoAberta, Position(), usarStopLoss, stopLossPreco, usarStopGain, stopGainPreco, usarTrailingStop, trailingPreco) then
+  begin
+    ClosePosition();
+    posicaoAberta := False;
+  end;
+
+  if (posicaoAberta) and (Position() <> 0) then
+  begin
+    if (estrategia = "CASH") and (cashZerarSeCruzou) then
+    begin
+      eC := MediaExp(emaCurta, Close);
+      eL := MediaExp(emaLonga, Close);
+
+      if (Position() > 0) then
+      begin
+        if (eC < eL) then
+        begin
+          ClosePosition();
+          posicaoAberta := False;
+        end;
+      end
+      else if (Position() < 0) then
+      begin
+        if (eC > eL) then
+        begin
+          ClosePosition();
+          posicaoAberta := False;
+        end;
+      end;
+    end;
+    
+    if (estrategia = "VWAP") and (vwapSaidaCruzamento) then
+    begin
+      v := VWAP(1);
+      if ((Position() > 0) and (Close < v)) or ((Position() < 0) and (Close > v)) then
+      begin
+        ClosePosition();
+        posicaoAberta := False;
+      end;
+    end;
+  end;
+
+  podeEntrar := (not bloqueadoDia)
+                and DentroJanelaOp(usarJanelaHoraria, horaInicio, horaFim)
+                and (tradesHoje < maxTradesDia)
+                and (not CandleElefante(atrLen, elefanteATRmult, volumePeriodos))
+                and (spikeBlockCount = 0)
+                and FiltroVolume(filtroVolumeAtivado, volumePeriodos, volumeMinimo)
+                and FiltroSpread(maxSpreadPontos);
+
+  if (reduzirExposicaoVolatil) and DentroJanelaVolatil(usarJanelaVolatil, horaVolatilInicio, horaVolatilFim) then
+    podeEntrar := podeEntrar and (contratosAtual < 2);
+
+  if (podeEntrar) and (not posicaoAberta) then
+  begin
+    cashSinal := SinalCash(emaCurta, emaLonga, maxDistMedias, atrLen, fatorBandaATR);
+    vwapSinal := SinalVWAP(vwapDesvioPct);
+    rsiSinal := SinalRSI();
+    confluenciaSinal := GeraConfluencia(minConfluencias, cashSinal, vwapSinal, rsiSinal);
+
+    if (estrategia = "CASH") then sinal := cashSinal
+    else if (estrategia = "VWAP") then sinal := vwapSinal
+    else if (estrategia = "CONFLUENCE") then sinal := confluenciaSinal
+    else sinal := 0;
+
+    if (sinal = 1) then // Compra
+    begin
+      BuyAtMarket(contratosPrimeira);
+      precoEntrada := Close;
+      if (usarStopLoss) then stopLossPreco := precoEntrada - stopLossFixo;
+      if (usarStopGain) then stopGainPreco := precoEntrada + stopGainFixo;
+      if (usarTrailingStop) then trailingPreco := precoEntrada - stopLossFixo;
+      posicaoAberta := True;
+      tradesHoje := tradesHoje + 1;
+    end
+    else if (sinal = -1) then // Venda
+    begin
+      SellShortAtMarket(contratosPrimeira);
+      precoEntrada := Close;
+      if (usarStopLoss) then stopLossPreco := precoEntrada + stopLossFixo;
+      if (usarStopGain) then stopGainPreco := precoEntrada - stopGainFixo;
+      if (usarTrailingStop) then trailingPreco := precoEntrada + stopLossFixo;
+      posicaoAberta := True;
+      tradesHoje := tradesHoje + 1;
+    end;
+  end
+  else if (podeEntrar) and (posicaoAberta) and (escalonamento) and (contratosAtual < contratosMaximos) then
+  begin
+    distancia := Abs(Close - precoEntrada);
+    
+    if (distancia >= distanciaEscalon) then
+    begin
+      cashSinal := SinalCash(emaCurta, emaLonga, maxDistMedias, atrLen, fatorBandaATR);
+      vwapSinal := SinalVWAP(vwapDesvioPct);
+      rsiSinal := SinalRSI();
+      confluenciaSinal := GeraConfluencia(minConfluencias, cashSinal, vwapSinal, rsiSinal);
+
+      if (estrategia = "CASH") then sinal := cashSinal
+      else if (estrategia = "VWAP") then sinal := vwapSinal
+      else if (estrategia = "CONFLUENCE") then sinal := confluenciaSinal
+      else sinal := 0;
+      
+      if (Position() > 0) and (sinal = 1) then
+      begin
+        BuyAtMarket(1);
+        tradesHoje := tradesHoje + 1;
+      end
+      else if (Position() < 0) and (sinal = -1) then
+      begin
+        SellShortAtMarket(1);
+        tradesHoje := tradesHoje + 1;
+      end;
+    end;
+  end;
+
+end;

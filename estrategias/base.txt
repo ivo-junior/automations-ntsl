@@ -1,0 +1,30 @@
+//------------------
+// Esse arquivo tem a finalidade de desenvolver as funções base para futuras altumações.
+// Seria como uma estrutura principal, funções uteis, Estratégias favoritas...
+//------------------
+
+
+{
+    Essa função serve para calcular pontos de suporte e resistencia/ Topos e fundos com o minimo de latencia possivel.
+    Problema: as vezes ao executar uma estrategia em tempo de execução podem existir alguns delays na resposta reativa
+    de algumas funções, essa lógica dessa função tenta diminuir essa latencia.
+}
+Function CalcularHighestLowest(Fractal : integer) : Integer;
+Var
+   cHigh, cLow : Boolean;
+   vHigh, vLow : Float;
+   n           : Integer;
+Begin
+   // Cálculo do indicador de Highest / Lowest
+   vLow  := Lowest(Low, Fractal);
+   vHigh := Highest(High, Fractal);
+   cHigh := vHigh <= vHigh[1];
+   cLow  := vLow  >= vLow[1];
+
+   If cHigh and not cHigh[1] then n := 1
+   else if cLow and not cLow[1] then n := -1
+   else n := 0;
+
+   // Retorna o resultado
+   Result := n;
+End;
