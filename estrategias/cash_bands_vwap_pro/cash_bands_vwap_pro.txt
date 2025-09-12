@@ -110,7 +110,7 @@ begin
     Result := True
   else
   begin
-    hLocal := floor(Time / 100);
+    hLocal := Floor(Time / 100);
     Result := (hLocal >= pInicio) and (hLocal < pFim);
   end;
 end;
@@ -123,7 +123,7 @@ begin
     Result := False
   else
   begin
-    hLocal := floor(Time / 100);
+    hLocal := Floor(Time / 100);
     Result := (hLocal >= pInicio) and (hLocal < pFim);
   end;
 end;
@@ -301,7 +301,7 @@ begin
     contratosAtual := 0;
   end;
 
-  H := floor(Time / 100);
+  H := Floor(Time / 100);
   if (zeragemForcada) and (H >= horaZeragem) and (Position() <> 0) then
   begin
     ClosePosition();
@@ -336,25 +336,28 @@ begin
   else if (spikeBlockCount > 0) then
     spikeBlockCount := spikeBlockCount - 1;
   
+  // --- Lógica de Trailing Stop por Passos (Step) ---
   if (usarTrailingStop) and (posicaoAberta) then
   begin
     if (Position() > 0) then
     begin
-      if (Close >= precoEntrada + trailingInicio) then
-      begin
-        novoTrailing := Close - stopLossFixo;
-        if (novoTrailing > trailingPreco) then
-          trailingPreco := novoTrailing;
-      end;
+      // 1. Ativa o trailing stop, movendo para o breakeven quando o lucro atinge 'trailingInicio'
+      if (trailingPreco < precoEntrada) and (Close >= precoEntrada + trailingInicio) then
+        trailingPreco := precoEntrada;
+      
+      // 2. Se já estiver ativo, move o stop em 'passos' discretos para proteger o lucro
+      if (trailingPreco >= precoEntrada) and (trailingPasso > 0) and (Close >= trailingPreco + trailingPasso) then
+        trailingPreco := trailingPreco + Floor((Close - trailingPreco) / trailingPasso) * trailingPasso;
     end
     else if (Position() < 0) then
     begin
-      if (Close <= precoEntrada - trailingInicio) then
-      begin
-        novoTrailing := Close + stopLossFixo;
-        if (novoTrailing < trailingPreco) then
-          trailingPreco := novoTrailing;
-      end;
+      // 1. Ativa o trailing stop para a venda
+      if (trailingPreco > precoEntrada) and (Close <= precoEntrada - trailingInicio) then
+        trailingPreco := precoEntrada;
+
+      // 2. Se já estiver ativo, move o stop da venda em 'passos'
+      if (trailingPreco <= precoEntrada) and (trailingPasso > 0) and (Close <= trailingPreco - trailingPasso) then
+        trailingPreco := trailingPreco - Floor((trailingPreco - Close) / trailingPasso) * trailingPasso;
     end;
   end;
 

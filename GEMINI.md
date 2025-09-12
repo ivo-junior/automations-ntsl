@@ -26,3 +26,43 @@ Este repositório contém uma documentação robusta que deve ser a principal fo
 - **Outros arquivos em `docs/`**: Contêm guias de boas práticas, sintaxe e outros detalhes importantes.
 
 Qualquer desenvolvimento deve estar alinhado com os padrões, a sintaxe e as estratégias já documentadas neste projeto.
+
+---
+
+## 4. Diretrizes de Sintaxe NTSL (Aprendizados)
+
+Durante a interação, foram descobertas as seguintes regras e convenções para a variante de NTSL utilizada, que devem ser seguidas para evitar erros de compilação:
+
+1.  **Estrutura do Script (Indicadores):** A estrutura correta para indicadores visuais é declarar os blocos `Input` e `Var` no escopo global, antes do bloco principal `begin...end`. O compilador parece rejeitar declarações de variáveis locais (`var`) dentro do `begin...end` para este tipo de script.
+
+2.  **Strings:** Literais de string devem ser sempre delimitados por aspas duplas (`"`). O uso de aspas simples (`'`) causa erros de compilação.
+
+3.  **Plotagem de Linhas:**
+    *   A plotagem é feita de forma procedural, com as chamadas de função dentro do bloco `begin...end`.
+    *   A primeira linha a ser plotada usa a função `Plot()`. A segunda usa `Plot2()`, a terceira `Plot3()`, e assim por diante. A função `Plot1()` não é um identificador válido.
+    *   A sintaxe correta para plotar e estilizar é usar chamadas separadas: `Plot(valor);` seguido por `SetPlotColor(1, clCor);` e `SetPlotStyle(1, 2);`. O número no `SetPlot...` corresponde ao número da função `Plot` (onde `Plot` é 1, `Plot2` é 2, etc.).
+
+4.  **Escopo e Funções:**
+    *   Funções **não podem modificar variáveis globais** diretamente.
+    *   O fluxo de dados correto é: 1) Calcular os valores necessários no escopo principal (`begin...end`). 2) Passar esses valores como parâmetros de **entrada** para as funções. 3) A função usa esses parâmetros para sua lógica e retorna um único valor via `Result`.
+    *   Tentar usar parâmetros por referência (`var outParam: float`) para que uma função modifique variáveis externas causa o erro `Não é possível copiar para...`.
+    *   ***OBS***: Você deve sempre consultar `docs/funcoes.md` para entender a sintaxe correta de declaração e uso de funções.
+* 
+
+5.  **Biblioteca Padrão:**
+    *   A biblioteca de funções é restrita e sensível a maiúsculas/minúsculas.
+    *   Funções como `IsFirstBar` e `DrawIcon` não existem. Devem ser usadas alternativas documentadas.
+    *   Para `IsFirstBar`, a lógica de inicialização deve ser tratada de outra forma (ex: variáveis globais que persistem entre as execuções).
+    *   Para `DrawIcon`, a alternativa é `PlotText()`.
+    *   Nomes de funções devem ter a capitalização correta, como `Floor`, `AvgTrueRange`, etc.
+    *   ***OBS***: Você deve sempre consultar `docs/funcoes_constantes_NTSL.md` para verificar a existência e a sintaxe correta das funções.
+
+## 5. Materiais de Referência
+
+- [Catálogo de Exemplos](docs/catalog.md)
+- [Guia de Boas Práticas NTSL](docs/boas_pratic.md)
+- [Sintaxe e Convenções NTSL](docs/sintaxe_NTSL.md)
+- [Funções e Constantes NTSL](docs/funcoes_constantes_NTSL.md)
+- [Diretrizes para Desenvolvimento de Funções](docs/funcoes.md)
+- [Controle Lógico em NTSL](docs/controle_logico.md)
+- [E muito mais na pasta `docs/`...](docs/index.md)
