@@ -51,7 +51,7 @@ Input
   pb_horaFim(0915);
   bb_periodo(20);
   bb_desvio(2.0);
-  bb_tipoMedia(0);
+  bb_tipoMedia(1);
 
   // -------- FILTROS GERAIS DE ENTRADA --------
   filtro_volatilidade_atrPeriodo(14);

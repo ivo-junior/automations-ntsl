@@ -66,3 +66,89 @@ Durante a interação, foram descobertas as seguintes regras e convenções para
 - [Diretrizes para Desenvolvimento de Funções](docs/funcoes.md)
 - [Controle Lógico em NTSL](docs/controle_logico.md)
 - [E muito mais na pasta `docs/`...](docs/index.md)
+
+
+-----
+
+# Registro de logs:Imagem 1 – Gráfico de Patrimônio
+
+Descrição das Imagens – Estratégia ORQUESTRADOR_MODERADO (WINFUT, 5min)
+Imagem 1 – Gráfico de Operações
+
+É um histograma das operações individuais ao longo do tempo.
+
+As barras verdes representam operações lucrativas, enquanto as vermelhas indicam operações com prejuízo.
+
+O gráfico mostra que as perdas (barras vermelhas) foram mais constantes e, em alguns momentos, mais intensas do que os ganhos.
+
+Apesar de algumas sequências positivas (lotes de barras verdes), o saldo global foi negativo.
+
+Imagem 2 – Gráfico de Patrimônio (Profit Pro)
+
+Mostra a evolução do patrimônio acumulado durante o período de 13/05/2025 a 15/09/2025.
+
+O desempenho inicia com leve queda e, no dia 19/05/2025, já há registro de perda de R$ -180,00.
+
+A partir daí, o patrimônio segue em tendência negativa, com pequenas recuperações ocasionais, mas sem inverter o quadro.
+
+No final do período, o resultado líquido se mantém em território negativo, próximo a R$ -564,00.
+
+Imagem 3 – Resumo Estatístico
+
+Estratégia: orquestrador_moderado_1.
+
+Período: 13/05/2025 a 15/09/2025.
+
+Timeframe: 5 minutos.
+
+Slippage: 0.
+
+Saldo Líquido Total: R$ -564,00 (resultado negativo).
+
+Lucro Bruto: R$ 4.052,00.
+
+Prejuízo Bruto: R$ -4.616,00.
+
+Custos: R$ 0,00 (não considerados neste backtest).
+
+Fator de Lucro: 0,88 (estratégia não lucrativa neste cenário).
+
+📊 Operações
+
+Total de operações: 126.
+
+Vencedoras: 58 (46,03% de acerto).
+
+Perdedoras: 66.
+
+Zeradas: 2.
+
+Imagem 4 – Curva de Equity (Interpretador próprio)
+
+Gráfico gerado a partir do teu interpretador NTSL (via Gemini CLI).
+
+Eixo Y: resultado acumulado (R$).
+
+Eixo X: datas (13/05/2025 a 15/09/2025).
+
+Mostra claramente uma tendência de queda constante no resultado acumulado.
+
+Pequenas fases de recuperação são visíveis (principalmente entre final de julho e setembro), mas o saldo final chega a aproximadamente R$ -4.500,00.
+
+Esse resultado é mais negativo do que o registrado no backtest nativo do Profit Pro, sugerindo diferenças na forma como ordens, stops ou regras de execução foram interpretados.
+
+Análise Comparativa (Profit Pro x Interpretador NTSL)
+
+Profit Pro (5min): prejuízo líquido de R$ -564,00.
+
+Interpretador (5min): prejuízo acumulado próximo de R$ -4.500,00.
+
+Diferença: o interpretador mostrou resultado muito mais negativo, possivelmente por diferenças em:
+
+Critérios de execução (entrada/saída de ordens).
+
+Gestão de stops e targets.
+
+Ajuste de contratos e alavancagem.
+
+Tratamento de custos e arredondamentos.
