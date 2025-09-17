@@ -8,11 +8,11 @@ Este script demonstra como:
 4. Analisar resultados
 """
 
-import sys
 import os
+import sys
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
-from backtest import NTSLParser, BacktestEngine, DataProvider, PerformanceAnalyzer
+from backtest import NTSLParser, BacktestEngine, DataProvider
 import matplotlib.pyplot as plt
 
 def main():
@@ -20,43 +20,49 @@ def main():
     
     # 1. Configuração
     strategy_file = r"c:\Dev\automations-ntsl\estrategias\automations\orquestrador_moderado_1.txt"
-    symbol = "PETR4.SA"
-    start_date = "2024-08-14"
-    end_date = "2024-09-14"
-    interval = "15m"
+    symbol = r"C:\Dev\automations-ntsl\backtest\dados\WINFUTV_F_0_1min.csv"
+    start_date = "2025-07-29"
+    end_date = "2025-09-16"
+    interval = "1min" # Intervalo do arquivo CSV original
+    source = "local_csv"
+    target_interval = "5min" # Intervalo para reamostragem
     
     print("=== SISTEMA DE BACKTEST NTSL ===\n")
     
     # 2. Parsear estratégia
-    print("📄 Parseando estratégia...")
+    print("Parseando estratégia...")
     parser = NTSLParser()
     strategy = parser.parse_file(strategy_file)
     
-    print(f"✅ Estratégia carregada: {strategy.name}")
+    print(f"Estratégia carregada: {strategy.name}")
     print(f"   Magic Number: {strategy.magic_number}")
     print(f"   Parâmetros de risco: {len(strategy.risk_params)} encontrados\n")
     
     # 3. Obter dados
-    print("📊 Obtendo dados históricos...")
+    print("Obtendo dados históricos...")
     data_provider = DataProvider()
-    data = data_provider.get_data(symbol, start_date, end_date, interval)
+    data = data_provider.get_data(symbol, start_date, end_date, interval, source, target_interval)
     
-    print(f"✅ Dados carregados: {len(data)} barras")
+    print(f"Dados carregados: {len(data)} barras")
     print(f"   Período: {data.index[0]} a {data.index[-1]}")
     print(f"   Preço inicial: {data['close'].iloc[0]:.2f}")
     print(f"   Preço final: {data['close'].iloc[-1]:.2f}\n")
     
     # 4. Executar backtest
-    print("🚀 Executando backtest...")
+    print("Executando backtest...")
     engine = BacktestEngine()
-    result = engine.run_backtest(strategy, data)
+    result = engine.run_backtest(strategy, data, asset="WINFUT", timeframe="5m")
     
     # 5. Análise de resultados
     print("\n" + "="*50)
-    print("📈 RESULTADOS DO BACKTEST")
+    print("RESULTADOS DO BACKTEST")
     print("="*50)
     
     metrics = result.metrics
+
+    if not metrics:
+        print("Nenhuma operação executada para o período selecionado.")
+        return
     
     print(f"Saldo Líquido Total: R$ {metrics['net_profit']:.2f}")
     print(f"Lucro Bruto: R$ {metrics['gross_profit']:.2f}")  
@@ -69,11 +75,11 @@ def main():
     print(f"Resultado médio por trade: R$ {metrics['avg_trade']:.2f}")
     
     # 6. Comparação com resultado informado
-    print(f"\n📊 COMPARAÇÃO COM RESULTADO PROFIT PRO:")
-    print(f"Resultado esperado: R$ 717,00")
-    print(f"Resultado obtido: R$ {metrics['net_profit']:.2f}")
-    diferenca = metrics['net_profit'] - 717
-    print(f"Diferença: R$ {diferenca:.2f} ({diferenca/717*100:+.1f}%)")
+    print(f"\nCOMPARAÇÃO COM RESULTADO PROFIT PRO:")
+    # print(f"Resultado esperado: R$ 717,00")
+    # print(f"Resultado obtido: R$ {metrics['net_profit']:.2f}")
+    # diferenca = metrics['net_profit'] - 717
+    # print(f"Diferença: R$ {diferenca:.2f} ({diferenca/717*100:+.1f}%)")
     
     # 7. Gráfico da curva de equity (opcional)
     if len(result.equity_curve) > 0:
@@ -87,9 +93,9 @@ def main():
         plt.tight_layout()
         
         # Salvar gráfico
-        chart_path = f"equity_curve_{strategy.name}_{symbol}.png"
+        chart_path = f"equity_curve_{strategy.name}_{os.path.basename(symbol)}.png"
         plt.savefig(chart_path)
-        print(f"\n📊 Gráfico salvo: {chart_path}")
+        print(f"\nGráfico salvo: {chart_path}")
         
         # Mostrar gráfico se disponível
         try:
@@ -98,11 +104,11 @@ def main():
             print("   (Interface gráfica não disponível)")
     
     # 8. Lista de trades detalhada
-    print(f"\n📋 TRADES EXECUTADOS ({len(result.trades)} operações):")
+    print(f"TRADES EXECUTADOS ({len(result.trades)} operações):")
     print("-" * 80)
     for i, trade in enumerate(result.trades[:10]):  # Mostrar apenas primeiros 10
         print(f"{i+1:2d}. {trade.direction:5s} | "
-              f"{trade.entry_time.strftime('%d/%m %H:%M')} → "
+              f"{trade.entry_time.strftime('%d/%m %H:%M')} -> "
               f"{trade.exit_time.strftime('%d/%m %H:%M') if trade.exit_time else 'ABERTO':11s} | "
               f"R$ {trade.result:8.2f}")
     

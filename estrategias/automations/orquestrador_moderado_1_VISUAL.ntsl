@@ -40,6 +40,11 @@ Var
   // --- Variáveis de Indicadores para Plotagem ---
   lw_tendencia_val: Float;
   bb_sup_val, bb_inf_val: Float;
+  horaAtual: Integer;
+  sinalLW, sinalPB, sinalBB: Integer;
+  scoreCompra, scoreVenda: Float;
+  // Variáveis locais para cálculo
+  lw_mediaSinalCompra, lw_mediaSinalVenda: Float;
 
 // ======== FUNÇÕES DE SINAL (REPLICADAS DA AUTOMAÇÃO) ========
 
@@ -80,12 +85,6 @@ end;
 
 // ======== BLOCO PRINCIPAL DE EXECUÇÃO ========
 begin
-  var
-    horaAtual: Integer;
-    sinalLW, sinalPB, sinalBB: Integer;
-    scoreCompra, scoreVenda: Float;
-    // Variáveis locais para cálculo
-    lw_mediaSinalCompra, lw_mediaSinalVenda: Float;
 
   // --- Reset Diário ---
   if (Date <> ultimoDia) then
@@ -143,7 +142,7 @@ begin
   if (plotarSinalOrquestrado) then
   begin
     if (scoreCompra >= scoreMinimoEntrada) and (scoreCompra > scoreVenda) then
-      PlotText("C", clLime, 0, 14, Low - (AvgTrueRange(14,0)));
+      PlotText("C", clLime, 0, 14, Low - (AvgTrueRange(14,0)))
     else if (scoreVenda >= scoreMinimoEntrada) and (scoreVenda > scoreCompra) then
       PlotText("V", clFuchsia, 0, 14, High + (AvgTrueRange(14,0)));
   end;

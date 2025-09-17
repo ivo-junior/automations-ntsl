@@ -89,7 +89,7 @@ setup:
 deps:
 	@echo "📦 Instalando dependências Python..."
 	@python -m pip install --upgrade pip
-	@python -m pip install pandas numpy yfinance matplotlib openpyxl
+	@	@python -m pip install -r requirements.txt
 	@echo "✅ Dependências instaladas!"
 
 # Instalação completa
@@ -104,17 +104,18 @@ install: setup deps
 # Teste rápido interativo
 test:
 	@echo "🧪 Executando teste interativo..."
-	@cd "$(PROJECT_ROOT)" && python "$(QUICK_TEST)"
+	@cd "$(PROJECT_ROOT)" && python -m examples.quick_test
 
 # Execução em modo batch
 batch:
 	echo "🤖 Executando backtest em modo batch..."
-		cd "$(PROJECT_ROOT)" && python "$(CONSOLE_RUNNER)" --batch \
+		cd "$(PROJECT_ROOT)" && set PYTHONIOENCODING=UTF-8 && python -m backtest.console_runner --batch \
 			--strategy "$(STRATEGIES_DIR)/$(STRATEGY)" \
 			--data "$(DATA_DIR)/$(DATA)" \
 			--start-date "$(START)" \
 			--end-date "$(END)" \
-			--output "$(RESULTS_DIR)/backtests"
+			--output "$(RESULTS_DIR)/backtests" \
+			--timeframe "$(TIMEFRAME)"
 
 # Execução batch com parâmetros personalizados
 batch-custom:
@@ -122,7 +123,7 @@ batch-custom:
 	@echo "   Estratégia: $(STRATEGY)"
 	@echo "   Dados: $(DATA)"
 	@echo "   Período: $(START) a $(END)"
-	@cd "$(PROJECT_ROOT)" && python "$(CONSOLE_RUNNER)" --batch \
+	@cd "$(PROJECT_ROOT)" && python -m backtest.console_runner --batch \
 		--strategy "$(STRATEGY)" \
 		--data "$(DATA)" \
 		--start-date "$(START)" \

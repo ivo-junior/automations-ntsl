@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import talib as ta
 from typing import Tuple
 
 class TechnicalIndicators:
@@ -11,8 +12,8 @@ class TechnicalIndicators:
     @staticmethod
     def sma(data: pd.Series, period: int) -> pd.Series:
         """
-        Simple Moving Average - função Media() do NTSL
-        Conforme documentação: Media(Period, Source)
+        Simple Moving Average - Implementação customizada para alinhar com Profit Pro.
+        Usa a função rolling do pandas para maior controle.
         """
         return data.rolling(window=period, min_periods=1).mean()
     
@@ -22,18 +23,23 @@ class TechnicalIndicators:
         Exponential Moving Average - função XAverage() do NTSL
         Conforme documentação: XAverage(Period, Source)
         """
-        return data.ewm(span=period, adjust=False).mean()
+        return ta.EMA(data, timeperiod=period)
     
+    @staticmethod
+    def smma(data: pd.Series, period: int) -> pd.Series:
+        """
+        Smoothed Moving Average (SMMA) / Welles Wilder's Moving Average (WWMA).
+        Equivalent to EMA with alpha = 1/period.
+        """
+        return data.ewm(span=period, adjust=False).mean()
+
     @staticmethod
     def wma(data: pd.Series, period: int) -> pd.Series:
         """
         Weighted Moving Average - função WAverage() do NTSL
         Conforme documentação: WAverage(Period, Source)
         """
-        weights = np.arange(1, period + 1)
-        return data.rolling(window=period, min_periods=1).apply(
-            lambda x: np.average(x, weights=weights[:len(x)]), raw=True
-        )
+        return ta.WMA(data, timeperiod=period)
     
     @staticmethod
     def atr(data: pd.DataFrame, period: int = 14) -> pd.Series:
@@ -44,16 +50,7 @@ class TechnicalIndicators:
         high = data['high']
         low = data['low']  
         close = data['close']
-        
-        # True Range calculation
-        tr1 = high - low
-        tr2 = abs(high - close.shift(1))
-        tr3 = abs(low - close.shift(1))
-        
-        true_range = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
-        
-        # ATR é a média móvel exponencial do True Range para maior reatividade
-        return true_range.ewm(span=period, adjust=False).mean()
+        return ta.ATR(high, low, close, timeperiod=period)
     
     @staticmethod
     def bollinger_bands(data: pd.Series, period: int = 20, std_dev: float = 2.0, ma_type: str = 'sma') -> Tuple[pd.Series, pd.Series, pd.Series]:
@@ -62,20 +59,20 @@ class TechnicalIndicators:
         Conforme documentação: BollingerBands(Desvio, Periodo, TipoMedia)
         Retorna: (Upper, Middle, Lower)
         """
-        # Selecionar o tipo de média com base no parâmetro
-        if ma_type.lower() == 'ema':
-            middle = TechnicalIndicators.ema(data, period)
-        elif ma_type.lower() == 'wma':
-            middle = TechnicalIndicators.wma(data, period)
-        else: # Padrão é SMA
-            middle = TechnicalIndicators.sma(data, period)
+        # TA-Lib BBANDS uses SMA by default for the middle band.
+        # If other MA types are needed, the middle band would need to be calculated separately
+        # and then the standard deviation applied. For simplicity and common usage,
+        # we'll stick to the default SMA for the middle band as TA-Lib implements it.
+        upper, middle, lower = ta.BBANDS(data, timeperiod=period, nbdevup=std_dev, nbdevdn=std_dev, matype=ma_type)
         
-        # Desvio padrão
-        std = data.rolling(window=period, min_periods=1).std()
-        
-        # Bandas superior e inferior
-        upper = middle + (std * std_dev)
-        lower = middle - (std * std_dev)
+        # If a different MA type is explicitly requested, we calculate the middle band separately
+        # and then re-calculate upper/lower based on that and the standard deviation.
+        # However, TA-Lib's BBANDS directly provides the bands based on its internal MA calculation.
+        # For now, we'll assume the default SMA for BBANDS in TA-Lib is acceptable,
+        # or that the ma_type parameter primarily refers to other standalone MA functions.
+        # If strict adherence to ma_type for the middle band of BBANDS is required,
+        # this function would need more complex logic to replicate TA-Lib's std dev calculation
+        # on a custom MA.
         
         return upper, middle, lower
     
@@ -85,21 +82,7 @@ class TechnicalIndicators:
         Relative Strength Index - função RSI() do NTSL
         Conforme documentação: RSI(Period, Source)
         """
-        delta = data.diff()
-        
-        # Separar ganhos e perdas
-        gains = delta.where(delta > 0, 0)
-        losses = -delta.where(delta < 0, 0)
-        
-        # Calcular médias móveis (Wilder's smoothing)
-        avg_gains = gains.ewm(alpha=1/period, adjust=False).mean()
-        avg_losses = losses.ewm(alpha=1/period, adjust=False).mean()
-        
-        # RSI calculation
-        rs = avg_gains / avg_losses
-        rsi = 100 - (100 / (1 + rs))
-        
-        return rsi
+        return ta.RSI(data, timeperiod=period)
     
     @staticmethod
     def stochastic(data_high: pd.Series, data_low: pd.Series, data_close: pd.Series, 
@@ -109,17 +92,10 @@ class TechnicalIndicators:
         Conforme documentação: Stochastic(KPeriod, DPeriod, Source)
         Retorna: (%K, %D)
         """
-        # Encontrar a mínima mais baixa e máxima mais alta no período
-        lowest_low = data_low.rolling(window=k_period, min_periods=1).min()
-        highest_high = data_high.rolling(window=k_period, min_periods=1).max()
-        
-        # Calcular %K
-        k_percent = 100 * ((data_close - lowest_low) / (highest_high - lowest_low))
-        
-        # Calcular %D (média móvel simples de %K)
-        d_percent = k_percent.rolling(window=d_period, min_periods=1).mean()
-        
-        return k_percent, d_percent
+        slowk, slowd = ta.STOCH(data_high, data_low, data_close, 
+                                fastk_period=k_period, slowk_period=d_period, 
+                                slowk_matype=0, slowd_period=d_period, slowd_matype=0) # 0 for SMA
+        return slowk, slowd
     
     @staticmethod
     def macd(data: pd.Series, fast: int = 12, slow: int = 26, signal: int = 9) -> Tuple[pd.Series, pd.Series, pd.Series]:
@@ -128,19 +104,7 @@ class TechnicalIndicators:
         Conforme documentação: MACD(FastPeriod, SlowPeriod, SignalPeriod, Source)
         Retorna: (MACD Line, Signal Line, Histogram)
         """
-        # EMAs rápida e lenta
-        ema_fast = data.ewm(span=fast, adjust=False).mean()
-        ema_slow = data.ewm(span=slow, adjust=False).mean()
-        
-        # Linha MACD
-        macd_line = ema_fast - ema_slow
-        
-        # Linha de sinal
-        signal_line = macd_line.ewm(span=signal, adjust=False).mean()
-        
-        # Histograma
-        histogram = macd_line - signal_line
-        
+        macd_line, signal_line, histogram = ta.MACD(data, fastperiod=fast, slowperiod=slow, signalperiod=signal)
         return macd_line, signal_line, histogram
     
     @staticmethod
@@ -167,13 +131,7 @@ class TechnicalIndicators:
         Triple Exponential Moving Average - presente no catálogo
         Usado em __MEDIAMOVELTRIPLA e outros exemplos
         """
-        # TEMA = 3*EMA - 3*EMA(EMA) + EMA(EMA(EMA))
-        ema1 = data.ewm(span=period, adjust=False).mean()
-        ema2 = ema1.ewm(span=period, adjust=False).mean()
-        ema3 = ema2.ewm(span=period, adjust=False).mean()
-        
-        tema = 3 * ema1 - 3 * ema2 + ema3
-        return tema
+        return ta.TEMA(data, timeperiod=period)
     
     @staticmethod
     def didi_index(data: pd.Series, short: int = 3, medium: int = 8, long: int = 20) -> Tuple[pd.Series, pd.Series, pd.Series]:

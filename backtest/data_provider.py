@@ -159,13 +159,13 @@ class DataProvider:
             if len(data) == 0:
                 raise ValueError(f"Todos os dados contêm valores NaN para {symbol}")
             
-            print(f"✅ Dados obtidos: {len(data)} barras de {symbol} ({start_date} a {end_date})")
+            print(f"Dados obtidos: {len(data)} barras de {symbol} ({start_date} a {end_date})")
             print(f"   Intervalo: {interval} | Período: {data.index[0]} até {data.index[-1]}")
             
             return data[required_cols]
             
         except Exception as e:
-            print(f"❌ Erro ao obter dados do Yahoo Finance: {str(e)}")
+            print(f"Erro ao obter dados do Yahoo Finance: {str(e)}")
             raise ValueError(f"Erro ao obter dados do Yahoo Finance para {symbol}: {str(e)}")
     
     def _get_local_csv_data(self, file_path: str, start_date: Optional[str], end_date: Optional[str], target_interval: Optional[str] = None) -> pd.DataFrame:
@@ -173,33 +173,79 @@ class DataProvider:
         
         try:
             # Carregar dados do CSV com formato específico
-            data = pd.read_csv(
-                file_path,
-                sep=';',
-                encoding='latin-1',
-                decimal=',',
-                thousands='.',
-                parse_dates={'datetime': ['Data', 'Hora']},
-                index_col='datetime'
-            )
+            try:
+                data = pd.read_csv(
+                    file_path,
+                    sep=';',
+                    encoding='utf-8',
+                    decimal=',',
+                    thousands='.',
+                    parse_dates=['Data'],
+                    index_col='Data',
+                    dayfirst=True
+                )
+            except UnicodeDecodeError:
+                # Tentar latin-1 se utf-8 falhar
+                data = pd.read_csv(
+                    file_path,
+                    sep=';',
+                    encoding='latin-1',
+                    decimal=',',
+                    thousands='.',
+                    parse_dates=['Data'],
+                    index_col='Data',
+                    dayfirst=True
+                )
             
-            # Padronizar nomes das colunas
-            column_mapping = {
-                'ativo': 'symbol',
-                'abertura': 'open',
-                'máximo': 'high',
-                'mínimo': 'low',
-                'fechamento': 'close',
-                'volume': 'volume'
+            # Mapeamento robusto de nomes de coluna
+            # Lista de possíveis nomes para cada coluna padrão (case-insensitive e com/sem acentos)
+            col_candidates = {
+                'open': ['abertura', 'open'],
+                'high': ['maxima', 'máxima', 'm_xima', 'high', 'm\x87xima'],
+                'low': ['minima', 'mínima', 'm_nima', 'low', 'm\x92nima'],
+                'close': ['fechamento', 'close'],
+                'volume': ['volume', 'vol'],
+                'sma_20_close_csv': ['orquestrador_moderado_1_visual [0.50 0.40 0.30 0.30 20 3 900 915 20 2.00 0 verdadeiro verdadeiro verdadeiro]'],
+                'bb_upper_csv': ['orquestrador_moderado_1_visual [0.50 0.40 0.30 0.30 20 3 900 915 20 2.00 0 verdadeiro verdadeiro verdadeiro].1'],
+                'bb_lower_csv': ['orquestrador_moderado_1_visual [0.50 0.40 0.30 0.30 20 3 900 915 20 2.00 0 verdadeiro verdadeiro verdadeiro].2'],
+                'first_bar_max_csv': ['orquestrador_moderado_1_visual [0.50 0.40 0.30 0.30 20 3 900 915 20 2.00 0 verdadeiro verdadeiro verdadeiro].3'],
+                'first_bar_min_csv': ['orquestrador_moderado_1_visual [0.50 0.40 0.30 0.30 20 3 900 915 20 2.00 0 verdadeiro verdadeiro verdadeiro].4']
             }
             
-            data.rename(columns={c: column_mapping.get(c.lower(), c.lower()) for c in data.columns}, inplace=True)
+            # Criar um dicionário de renomeação dinamicamente
+            rename_map = {}
+            for current_col in data.columns:
+                # Não normalizar acentos aqui, pois já estamos lidando com as representações de bytes
+                normalized_current_col = current_col.lower()
+                for standard_name, candidates in col_candidates.items():
+                    if normalized_current_col in candidates or current_col in candidates:
+                        rename_map[current_col] = standard_name
+                        break
             
-            print(f"✅ CSV (1-min) carregado: {len(data)} barras")
+            # Adicionar mais prints para depuração
+            print("Colunas originais do CSV:", data.columns.tolist())
+            data.rename(columns=rename_map, inplace=True)
+            print("Colunas após renomeação:", data.columns.tolist())
+
+            # Verificar se as colunas de referência foram carregadas
+            ref_cols = ['sma_20_close_csv', 'bb_upper_csv', 'bb_lower_csv']
+            for col in ref_cols:
+                if col not in data.columns:
+                    print(f"AVISO: Coluna de referência '{col}' não encontrada no CSV.")
+            
+            # Adicionar coluna de volume se não existir, antes da reamostragem
+            if 'volume' not in data.columns:
+                data['volume'] = 100
+
+            # Filtrar por período se especificado
+            if start_date and end_date:
+                start = pd.to_datetime(start_date)
+                end = pd.to_datetime(end_date)
+                data = data[(data.index >= start) & (data.index <= end)]
 
             # Reamostragem para o tempo gráfico alvo
             if target_interval and target_interval != "1min":
-                print(f"🔄 Reamostrando dados para {target_interval}...")
+                print(f"Reamostrando dados para {target_interval}...")
                 ohlc_dict = {
                     'open': 'first',
                     'high': 'max',
@@ -207,15 +253,12 @@ class DataProvider:
                     'close': 'last',
                     'volume': 'sum'
                 }
+                # Preservar colunas de referência, pegando o último valor da janela
+                ref_cols = ['sma_20_close_csv', 'bb_upper_csv', 'bb_lower_csv', 'first_bar_max_csv', 'first_bar_min_csv']
+                for col in ref_cols:
+                    if col in data.columns:
+                        ohlc_dict[col] = 'last'
                 data = data.resample(target_interval).agg(ohlc_dict)
-                data.dropna(inplace=True) # Remover intervalos sem dados
-                print(f"✅ Dados reamostrados: {len(data)} barras de {target_interval}")
-
-            # Filtrar por período se especificado
-            if start_date and end_date:
-                start = pd.to_datetime(start_date)
-                end = pd.to_datetime(end_date)
-                data = data[(data.index >= start) & (data.index <= end)]
             
             # Verificar colunas obrigatórias
             required_cols = ['open', 'high', 'low', 'close']
@@ -232,11 +275,18 @@ class DataProvider:
             if len(data) == 0:
                 raise ValueError("Nenhum dado válido encontrado após limpeza")
             
-            print(f"   Período final: {data.index[0]} até {data.index[-1]}")
-            print(f"   Colunas: {list(data.columns)}")
+            print(f"   Período final: {data.index.min()} até {data.index.max()}")
+            # Incluir colunas de referência se existirem
+            final_cols = required_cols + ['volume']
+            ref_cols = ['sma_20_close_csv', 'bb_upper_csv', 'bb_lower_csv', 'first_bar_max_csv', 'first_bar_min_csv']
+            for col in ref_cols:
+                if col in data.columns:
+                    final_cols.append(col)
+
+            print(f"   Colunas Finais: {final_cols}")
             
-            return data[required_cols + ['volume']]
+            return data[final_cols]
             
         except Exception as e:
-            print(f"❌ Erro ao carregar ou reamostrar CSV: {str(e)}")
+            print(f"Erro ao carregar ou reamostrar CSV: {str(e)}")
             raise ValueError(f"Erro no processamento do CSV: {str(e)}")

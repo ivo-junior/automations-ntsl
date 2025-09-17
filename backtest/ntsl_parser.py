@@ -24,7 +24,7 @@ class NTSLParser:
         self.strategy = None
         # Mapeamento baseado em docs/funcoes_constantes_NTSL.md
         self.ntsl_functions_map = {
-            'Media': 'sma',
+            'Media': 'smma',
             'Average': 'sma', 
             'WAverage': 'wma',
             'XAverage': 'ema',
@@ -104,7 +104,7 @@ class NTSLParser:
         
         # Padrão: Input ... (conteúdo até próxima seção)
         input_section = re.search(
-            r'Input\s+(.*?)(?=Var\s|function\s|begin\s|\Z)', 
+            r'Input\s+(.*?)(?=Var\s|function\s|begin\s|end\s*;|\Z)', 
             code, 
             re.DOTALL | re.IGNORECASE
         )

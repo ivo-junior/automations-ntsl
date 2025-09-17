@@ -70,85 +70,132 @@ Durante a interação, foram descobertas as seguintes regras e convenções para
 
 -----
 
-# Registro de logs:Imagem 1 – Gráfico de Patrimônio
+## Ajustes Realizados no Backtest
 
-Descrição das Imagens – Estratégia ORQUESTRADOR_MODERADO (WINFUT, 5min)
-Imagem 1 – Gráfico de Operações
+- **Custo por Operação:** O custo por operação foi fixado em `0.23` (entrada + saída) no arquivo `backtest/backtest_engine.py` para alinhar com os custos operacionais reais informados, substituindo o valor de `0.85` que estava no arquivo da estratégia e o valor `0.0` usado temporariamente para depuração.
 
-É um histograma das operações individuais ao longo do tempo.
+## Abaixo estão algumas citações de Jesse Livermore. Esses conselhos representam a experiência de um trader que enfrentou diversas situações, inclusive o famoso crash de 1929:
 
-As barras verdes representam operações lucrativas, enquanto as vermelhas indicam operações com prejuízo.
 
-O gráfico mostra que as perdas (barras vermelhas) foram mais constantes e, em alguns momentos, mais intensas do que os ganhos.
+- Nunca opere baseado em dicas;
+- Use um sistema e não saia dele;
+- Nunca compre uma ação porque ela teve uma grande queda da sua última alta;
+- Se uma ação não agir corretamente não toque-a; porque, não podendo dizer precisamente o que está errado, você não pode dizer para que lado ela irá;
+- Não culpe o mercado pelas suas perdas;
+- Nunca aumente uma posição perdedora. Uma posição perdedora siginifica que você está errado;
+- Ações nunca estão muito altas para começar a comprar nem muito baixas para começar a vender. Mas depois da primeira transação, não faça uma segunda a não ser que a primeira mostre lucro;
+- Sempre venda o que mostra um prejuízo, e mantenha o que está dando lucro;
+- Não discuta com o mercado. Não procure recuperar o prejuízo. Saia enquanto a saída é boa - e barata;
+- Existe somente um lado no mercado financeiro. E não é o lado bull (alta) e nem o lado bear (baixa) mas o lado certo;
+- O maior inimigo de um especulador é sempre o tédio.
+- Um homem deve sempre confiar em si mesmo e no seu julgamento se ele espera ganhar a vida com essa profissão;
+- Sempre use gerenciamento de capital;
+- Estabeleça o seu plano de trade antes que o mercado abra;
+- Detalhe o seu plano para cada trade;
+- Estabeleça pontos de entrada e saída e entenda a relação entre risco e recompensa;
+- Estabeleça pontos de entrada e saída e entenda a relação entre risco e recompensa;
+- Aceite pequenas perdas como parte do jogo se você quiser vencer;
+- Desenvolva um plano de trade para cada situação que você pode vir a enfrentar;
+- Não concentre-se no valor em que você empata quando estiver perdendo;
+- Não liquide uma posição vencedora para manter uma perdedora;
+- Desenvolva e mantenha um plano de saída., Siga esse plano com rígida disciplina;
+- Tenha paciência. Grandes movimentos demoram para se desenrolar;
+- Não fique curioso demais sobre a lógica por trás de um movimento. A chave para a fortuna no mercado é a simplicidade.
 
-Apesar de algumas sequências positivas (lotes de barras verdes), o saldo global foi negativo.
+# Resultados do Profit Pro no período de 29/07/2025 a 16/09/2025
+📊 Timeframe 1 Minuto
 
-Imagem 2 – Gráfico de Patrimônio (Profit Pro)
+>>Resumo Principal
+Saldo Líquido Total: R$ 27,00
+Fator de Lucro: 1,02
+Percentual de Acerto: 46,46%
+Total de Operações: 99
 
-Mostra a evolução do patrimônio acumulado durante o período de 13/05/2025 a 15/09/2025.
+>>Detalhes Financeiros
+Lucro Bruto: R$ 1.596,00
+Prejuízo Bruto: R$ -1.569,00
+Custos Totais: R$ 0,00
 
-O desempenho inicia com leve queda e, no dia 19/05/2025, já há registro de perda de R$ -180,00.
+>>talhes Operacionais
+Operações Vencedoras: 46
+Operações Perdedoras: 52
+Média por Trade: R$ 0,27
+Média Ganho / Média Perda: 1,15
 
-A partir daí, o patrimônio segue em tendência negativa, com pequenas recuperações ocasionais, mas sem inverter o quadro.
+---
 
-No final do período, o resultado líquido se mantém em território negativo, próximo a R$ -564,00.
+📊 Timeframe 5 Minutos
 
-Imagem 3 – Resumo Estatístico
+>>Resumo Principal
+Saldo Líquido Total: R$ 281,00
+Fator de Lucro: 1,16
+Percentual de Acerto: 51,72%
+Total de Operações: 58
 
-Estratégia: orquestrador_moderado_1.
+>>Detalhes Financeiros
+Lucro Bruto: R$ 2.029,00
+Prejuízo Bruto: R$ -1.748,00
+Custos Totais: R$ 0,00
 
-Período: 13/05/2025 a 15/09/2025.
+>>Detalhes Operacionais
+Operações Vencedoras: 30
+Operações Perdedoras: 26
+Média por Trade: R$ 4,84
+Média Ganho / Média Perda: 1,01
 
-Timeframe: 5 minutos.
+📊 Timeframe 10 Minutos
 
-Slippage: 0.
+>>Resumo Principal
+Saldo Líquido Total: R$ 473,00
+Fator de Lucro: 1,28
+Percentual de Acerto: 44,44%
+Total de Operações: 45
 
-Saldo Líquido Total: R$ -564,00 (resultado negativo).
+>>Detalhes Financeiros
+Lucro Bruto: R$ 2.136,00
+Prejuízo Bruto: R$ -1.663,00
+Custos Totais: R$ 0,00
 
-Lucro Bruto: R$ 4.052,00.
+>>Detalhes Operacionais
+Operações Vencedoras: 20
+Operações Perdedoras: 23
+Média por Trade: R$ 10,51
+Média Ganho / Média Perda: 1,48
 
-Prejuízo Bruto: R$ -4.616,00.
+📊 Timeframe 15 Minutos
 
-Custos: R$ 0,00 (não considerados neste backtest).
+Resumo Principal
+>>Saldo Líquido Total: R$ 616,00
+Fator de Lucro: 1,42
+Percentual de Acerto: 47,22%
+Total de Operações: 36
 
-Fator de Lucro: 0,88 (estratégia não lucrativa neste cenário).
+>>Detalhes Financeiros
+Lucro Bruto: R$ 2.072,00
+Prejuízo Bruto: R$ -1.456,00
+Custos Totais: R$ 0,00
 
-📊 Operações
+>>Detalhes Operacionais
+Operações Vencedoras: 17
+Operações Perdedoras: 19
+Média por Trade: R$ 17,11
+Média Ganho / Média Perda: 1,59
 
-Total de operações: 126.
+📊 Timeframe 30 Minutos
 
-Vencedoras: 58 (46,03% de acerto).
+>>Resumo Principal
+Saldo Líquido Total: R$ 291,00
+Fator de Lucro: 1,18
+Percentual de Acerto: 52,38%
+Total de Operações: 21
 
-Perdedoras: 66.
+>>Detalhes Financeiros
+Lucro Bruto: R$ 1.953,00
+Prejuízo Bruto: R$ -1.662,00
+Custos Totais: R$ 0,00
 
-Zeradas: 2.
-
-Imagem 4 – Curva de Equity (Interpretador próprio)
-
-Gráfico gerado a partir do teu interpretador NTSL (via Gemini CLI).
-
-Eixo Y: resultado acumulado (R$).
-
-Eixo X: datas (13/05/2025 a 15/09/2025).
-
-Mostra claramente uma tendência de queda constante no resultado acumulado.
-
-Pequenas fases de recuperação são visíveis (principalmente entre final de julho e setembro), mas o saldo final chega a aproximadamente R$ -4.500,00.
-
-Esse resultado é mais negativo do que o registrado no backtest nativo do Profit Pro, sugerindo diferenças na forma como ordens, stops ou regras de execução foram interpretados.
-
-Análise Comparativa (Profit Pro x Interpretador NTSL)
-
-Profit Pro (5min): prejuízo líquido de R$ -564,00.
-
-Interpretador (5min): prejuízo acumulado próximo de R$ -4.500,00.
-
-Diferença: o interpretador mostrou resultado muito mais negativo, possivelmente por diferenças em:
-
-Critérios de execução (entrada/saída de ordens).
-
-Gestão de stops e targets.
-
-Ajuste de contratos e alavancagem.
-
-Tratamento de custos e arredondamentos.
+>>Detalhes Operacionais
+Operações Vencedoras: 11
+Operações Perdedoras: 10
+Média por Trade: R$ 13,86
+Média Ganho / Média Perda: 1,07

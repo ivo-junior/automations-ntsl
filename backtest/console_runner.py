@@ -35,7 +35,7 @@ class ConsoleRunner:
     def run_interactive(self):
         """Executa backtest de forma interativa"""
         print("=" * 70)
-        print("🚀 SISTEMA DE BACKTEST NTSL - MODO INTERATIVO")
+        print("SISTEMA DE BACKTEST NTSL - MODO INTERATIVO")
         print("=" * 70)
         
         # Mostrar estrutura do projeto
@@ -46,10 +46,10 @@ class ConsoleRunner:
             strategy_path = self._get_strategy_path()
             strategy = self.parser.parse_file(strategy_path)
             
-            print(f"\n✅ Estratégia carregada: {strategy.name}")
-            print(f"   📄 Arquivo: {Path(strategy_path).name}")
-            print(f"   🎯 Magic Number: {strategy.magic_number}")
-            print(f"   ⚙️ Parâmetros: {len(strategy.inputs)} encontrados")
+            print(f"\nEstratégia carregada: {strategy.name}")
+            print(f"   Arquivo: {Path(strategy_path).name}")
+            print(f"   Magic Number: {strategy.magic_number}")
+            print(f"   Parâmetros: {len(strategy.inputs)} encontrados")
             
             # 2. Solicitar dados
             data_path = self._get_data_path()
@@ -61,10 +61,10 @@ class ConsoleRunner:
             start_date, end_date = self._get_date_range(data)
             if start_date and end_date:
                 data = data[(data.index >= start_date) & (data.index <= end_date)]
-                print(f"📅 Período filtrado: {start_date.date()} a {end_date.date()}")
+                print(f"Período filtrado: {start_date.date()} a {end_date.date()}")
             
             # 4. Executar backtest
-            print(f"\n🔄 Executando backtest...")
+            print(f"\nExecutando backtest...")
             result = self.engine.run_backtest(strategy, data, asset=asset_name, timeframe=target_interval)
             
             # 5. Mostrar resultados
@@ -74,28 +74,31 @@ class ConsoleRunner:
             self._export_options(result)
             
         except KeyboardInterrupt:
-            print(f"\n❌ Operação cancelada pelo usuário")
+            print(f"\nOperação cancelada pelo usuário")
         except Exception as e:
-            print(f"\n❌ Erro durante execução: {str(e)}")
+            print(f"\nErro durante execução: {str(e)}")
             import traceback
             traceback.print_exc()
     
     def run_batch(self, strategy_path: str, data_path: str, start_date: str = None, 
-                  end_date: str = None, output_dir: str = None):
+                  end_date: str = None, output_dir: str = None, timeframe: Optional[str] = None):
         """Executa backtest em modo batch (não-interativo)"""
         
         try:
-            print(f"🤖 MODO BATCH - Executando {strategy_path}")
-            
+            print(f"MODO BATCH - Executando {strategy_path}")
+            asset_name = Path(data_path).stem.split('_')[0]
+            timeframe_str = f"{timeframe}min" if timeframe else "1min"
+
             # Carregar estratégia
             strategy = self.parser.parse_file(strategy_path)
             
-            # Carregar dados
+            # Carregar e reamostrar dados
             data = self.data_provider.get_data(
                 symbol=data_path, 
                 start_date=start_date or '',
                 end_date=end_date or '',
-                source='local_csv'
+                source='local_csv',
+                target_interval=timeframe_str
             )
             
             # Filtrar período se especificado
@@ -105,33 +108,50 @@ class ConsoleRunner:
                 data = data[(data.index >= start) & (data.index <= end)]
             
             # Executar backtest
-            result = self.engine.run_backtest(strategy, data)
+            result = self.engine.run_backtest(strategy, data, asset=asset_name, timeframe=timeframe_str)
             
             # Exportar resultados
-            if output_dir:
-                self._export_results(result, strategy.name, output_dir)
+            if output_dir and result:
+                base_output_dir = self.base_dir / output_dir
+                csv_dir = base_output_dir.parent / "trades"
+                charts_dir = base_output_dir.parent / "graficos"
+                
+                excel_dir = base_output_dir
+                excel_dir.mkdir(parents=True, exist_ok=True)
+                csv_dir.mkdir(parents=True, exist_ok=True)
+                charts_dir.mkdir(parents=True, exist_ok=True)
+
+                # filename_base = self._generate_filename_base(result)
+                # self._export_excel_report(result, filename_base, excel_dir)
+                # self._export_trades_csv(result, filename_base, csv_dir)
+                # self._export_equity_chart(result, filename_base, charts_dir)
+
+            if result:
+                self._display_results(result)
             
             return result
             
         except Exception as e:
-            print(f"❌ Erro no modo batch: {str(e)}")
+            print(f"Erro no modo batch: {str(e)}")
+            import traceback
+            traceback.print_exc()
             return None
     
     def _get_strategy_path(self) -> str:
         """Solicita caminho da estratégia com seleção interativa"""
-        print(f"\n📁 SELEÇÃO DE ESTRATÉGIA NTSL")
+        print(f"\nSELEÇÃO DE ESTRATÉGIA NTSL")
         print(f"-" * 40)
         
         # Verificar se diretório de automações existe
         if not self.automations_dir.exists():
-            print(f"⚠️ Diretório não encontrado: {self.automations_dir}")
+            print(f"Diretório não encontrado: {self.automations_dir}")
             return self._get_strategy_path_manual()
         
         # Listar arquivos .txt no diretório de automações
         txt_files = list(self.automations_dir.rglob("*.txt"))
         
         if not txt_files:
-            print(f"⚠️ Nenhum arquivo .txt encontrado em {self.automations_dir}")
+            print(f"Nenhum arquivo .txt encontrado em {self.automations_dir}")
             return self._get_strategy_path_manual()
         
         # Organizar por subpasta para melhor visualização
@@ -142,26 +162,26 @@ class ConsoleRunner:
                 files_by_category[category] = []
             files_by_category[category].append(file)
         
-        print(f"📋 Estratégias disponíveis em {self.automations_dir.name}/:")
+        print(f"Estratégias disponíveis em {self.automations_dir.name}/:")
         print()
         
         all_files = []
         index = 1
         
         for category, files in files_by_category.items():
-            print(f"📂 {category.replace('_', ' ').title()}:")
+            print(f"{category.replace('_', ' ').title()}:")
             for file in files:
                 print(f"   {index:2d}. {file.name}")
                 all_files.append(file)
                 index += 1
             print()
         
-        print(f"   0. 📝 Digitar caminho manualmente")
-        print(f"   q. ❌ Sair")
+        print(f"   0. Digitar caminho manualmente")
+        print(f"   q. Sair")
         
         while True:
             try:
-                choice = input(f"\n🎯 Escolha uma estratégia (1-{len(all_files)}, 0, q): ").strip()
+                choice = input(f"\nEscolha uma estratégia (1-{len(all_files)}, 0, q): ").strip()
                 
                 if choice.lower() == 'q':
                     raise KeyboardInterrupt("Operação cancelada pelo usuário")
@@ -172,120 +192,23 @@ class ConsoleRunner:
                 choice_num = int(choice)
                 if 1 <= choice_num <= len(all_files):
                     selected_file = all_files[choice_num - 1]
-                    print(f"✅ Selecionado: {selected_file.relative_to(self.base_dir)}")
+                    print(f"Selecionado: {selected_file.relative_to(self.base_dir)}")
                     return str(selected_file)
                 else:
-                    print(f"❌ Opção inválida. Digite um número entre 1 e {len(all_files)}")
+                    print(f"Opção inválida. Digite um número entre 1 e {len(all_files)}")
                     
             except ValueError:
-                print(f"❌ Digite um número válido")
+                print(f"Digite um número válido")
             except KeyboardInterrupt:
                 raise
     
     def _get_strategy_path_manual(self) -> str:
         """Solicita caminho da estratégia manualmente"""
-        print(f"\n📝 ENTRADA MANUAL DE ESTRATÉGIA")
+        print(f"\nENTRADA MANUAL DE ESTRATÉGIA")
         print(f"-" * 35)
         
         while True:
-            path = input(f"📂 Caminho da estratégia (.txt): ").strip()
-            
-            if not path:
-                continue
-            
-            # Converter para Path e expandir caminhos relativos
-            path_obj = Path(path)
-            
-            # Se não é absoluto, tentar relativo ao diretório base
-            if not path_obj.is_absolute():
-                # Tentar diferentes possibilidades
-                test_paths = [
-                    self.base_dir / path,
-                    self.strategies_dir / path,
-                    self.automations_dir / path,
-                    Path(path).resolve()
-                ]
-                
-                for test_path in test_paths:
-                    if test_path.exists():
-                        path_obj = test_path
-                        break
-            
-            if path_obj.exists():
-                return str(path_obj)
-            else:
-                print(f"❌ Arquivo não encontrado: {path}")
-                print(f"💡 Dica: Use caminhos relativos como 'orquestrador_moderado_1.txt'")
-    
-    def _get_data_path(self) -> str:
-        """Solicita caminho dos dados CSV com seleção interativa"""
-        print(f"\n📊 SELEÇÃO DE DADOS (CSV)")
-        print(f"-" * 30)
-        
-        # Verificar se diretório de dados existe
-        if not self.data_dir.exists():
-            print(f"⚠️ Diretório de dados não encontrado: {self.data_dir}")
-            print(f"💡 Criando diretório...")
-            self.data_dir.mkdir(parents=True, exist_ok=True)
-        
-        # Listar arquivos CSV no diretório de dados
-        csv_files = list(self.data_dir.glob("*.csv"))
-        
-        if csv_files:
-            print(f"📋 Arquivos CSV disponíveis em {self.data_dir.name}/:")
-            print()
-            
-            for i, file in enumerate(csv_files, 1):
-                # Mostrar informações básicas do arquivo
-                try:
-                    file_size = file.stat().st_size
-                    size_mb = file_size / (1024 * 1024)
-                    print(f"   {i:2d}. {file.name} ({size_mb:.1f} MB)")
-                except:
-                    print(f"   {i:2d}. {file.name}")
-            
-            print(f"\n   0. 📝 Digitar caminho manualmente")
-            print(f"   q. ❌ Sair")
-            
-            while True:
-                try:
-                    choice = input(f"\n🎯 Escolha um arquivo (1-{len(csv_files)}, 0, q): ").strip()
-                    
-                    if choice.lower() == 'q':
-                        raise KeyboardInterrupt("Operação cancelada pelo usuário")
-                    
-                    if choice == '0':
-                        break
-                    
-                    choice_num = int(choice)
-                    if 1 <= choice_num <= len(csv_files):
-                        selected_file = csv_files[choice_num - 1]
-                        print(f"✅ Selecionado: {selected_file.name}")
-                        return str(selected_file)
-                    else:
-                        print(f"❌ Opção inválida. Digite um número entre 1 e {len(csv_files)}")
-                        
-                except ValueError:
-                    print(f"❌ Digite um número válido")
-                except KeyboardInterrupt:
-                    raise
-        else:
-            print(f"📁 Diretório vazio: {self.data_dir}")
-            print(f"💡 Coloque seus arquivos CSV neste diretório para seleção automática")
-        
-        return self._get_data_path_manual()
-    
-    def _get_data_path_manual(self) -> str:
-        """Solicita caminho dos dados CSV manualmente"""
-        print(f"\n📝 ENTRADA MANUAL DE DADOS")
-        print(f"-" * 30)
-        print(f"💡 Formatos suportados:")
-        print(f"   - CSV do Profit Pro")
-        print(f"   - Colunas: Date/Time, Open, High, Low, Close, Volume")
-        print(f"   - Separadores: vírgula, ponto-e-vírgula (auto-detectado)")
-        
-        while True:
-            path = input(f"\n📈 Caminho do arquivo CSV: ").strip()
+            path = input(f"Caminho da estratégia (.txt): ").strip()
             
             if not path:
                 continue
@@ -309,28 +232,123 @@ class ConsoleRunner:
             if path_obj.exists():
                 return str(path_obj)
             else:
-                print(f"❌ Arquivo não encontrado: {path}")
-                print(f"💡 Dica: Coloque o CSV em {self.data_dir} para seleção automática")
+                print(f"Arquivo não encontrado: {path}")
+                print(f"Dica: Use caminhos relativos como 'orquestrador_moderado_1.txt'")
+    
+    def _get_data_path(self) -> str:
+        """Solicita caminho dos dados CSV com seleção interativa"""
+        print(f"\nSELEÇÃO DE DADOS (CSV)")
+        print(f"-" * 30)
+        
+        # Verificar se diretório de dados existe
+        if not self.data_dir.exists():
+            print(f"Diretório de dados não encontrado: {self.data_dir}")
+            print(f"Criando diretório...")
+            self.data_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Listar arquivos CSV no diretório de dados
+        csv_files = list(self.data_dir.glob("*.csv"))
+        
+        if csv_files:
+            print(f"Arquivos CSV disponíveis em {self.data_dir.name}/:")
+            print()
+            
+            for i, file in enumerate(csv_files, 1):
+                # Mostrar informações básicas do arquivo
+                try:
+                    file_size = file.stat().st_size
+                    size_mb = file_size / (1024 * 1024)
+                    print(f"   {i:2d}. {file.name} ({size_mb:.1f} MB)")
+                except:
+                    print(f"   {i:2d}. {file.name}")
+            
+            print(f"\n   0. Digitar caminho manualmente")
+            print(f"   q. Sair")
+            
+            while True:
+                try:
+                    choice = input(f"\nEscolha um arquivo (1-{len(csv_files)}, 0, q): ").strip()
+                    
+                    if choice.lower() == 'q':
+                        raise KeyboardInterrupt("Operação cancelada pelo usuário")
+                    
+                    if choice == '0':
+                        break
+                    
+                    choice_num = int(choice)
+                    if 1 <= choice_num <= len(csv_files):
+                        selected_file = csv_files[choice_num - 1]
+                        print(f"Selecionado: {selected_file.name}")
+                        return str(selected_file)
+                    else:
+                        print(f"Opção inválida. Digite um número entre 1 e {len(csv_files)}")
+                        
+                except ValueError:
+                    print(f"Digite um número válido")
+                except KeyboardInterrupt:
+                    raise
+        else:
+            print(f"Diretório vazio: {self.data_dir}")
+            print(f"Coloque seus arquivos CSV neste diretório para seleção automática")
+        
+        return self._get_data_path_manual()
+    
+    def _get_data_path_manual(self) -> str:
+        """Solicita caminho dos dados CSV manualmente"""
+        print(f"\nENTRADA MANUAL DE DADOS")
+        print(f"-" * 30)
+        print(f"Formatos suportados:")
+        print(f"   - CSV do Profit Pro")
+        print(f"   - Colunas: Date/Time, Open, High, Low, Close, Volume")
+        print(f"   - Separadores: vírgula, ponto-e-vírgula (auto-detectado)")
+        
+        while True:
+            path = input(f"\nCaminho do arquivo CSV: ").strip()
+            
+            if not path:
+                continue
+            
+            # Converter para Path e expandir caminhos relativos
+            path_obj = Path(path)
+            
+            # Se não é absoluto, tentar relativo ao diretório base
+            if not path_obj.is_absolute():
+                test_paths = [
+                    Path(path).resolve(),
+                    self.data_dir / path,
+                    self.base_dir / path
+                ]
+                
+                for test_path in test_paths:
+                    if test_path.exists():
+                        path_obj = test_path
+                        break
+            
+            if path_obj.exists():
+                return str(path_obj)
+            else:
+                print(f"Arquivo não encontrado: {path}")
+                print(f"Dica: Coloque o CSV em {self.data_dir} para seleção automática")
     
     def _display_project_structure(self):
         """Exibe a estrutura de diretórios do projeto"""
-        print(f"\n📁 ESTRUTURA DO PROJETO:")
+        print(f"\nESTRUTURA DO PROJETO:")
         print(f"-" * 30)
-        print(f"📂 {self.base_dir.name}/")
-        print(f"   📂 estrategias/")
-        print(f"      📂 automations/          ← Estratégias NTSL (.txt)")
-        print(f"   📂 backtest/")
-        print(f"      📂 dados/               ← Dados CSV (1 minuto)")
-        print(f"   📂 examples/")
-        print(f"      📄 quick_test.py        ← Este script")
+        print(f"{self.base_dir.name}/")
+        print(f"   estrategias/")
+        print(f"      automations/          <- Estratégias NTSL (.txt)")
+        print(f"   backtest/")
+        print(f"      dados/               <- Dados CSV (1 minuto)")
+        print(f"   examples/")
+        print(f"      quick_test.py        <- Este script")
         print()
 
     def _get_target_interval(self) -> Optional[str]:
         """Solicita o tempo gráfico para reamostragem, validando a entrada."""
-        print(f"\n🕒 TEMPO GRÁFICO PARA ANÁLISE (Daytrade: 1 a 30 minutos)")
+        print(f"\nTEMPO GRÁFICO PARA ANÁLISE (Daytrade: 1 a 30 minutos)")
         print(f"-" * 55)
         while True:
-            interval_str = input(f"🕒 Digite o tempo em minutos (ex: 5, 15, 30) [Enter=1]: ").strip()
+            interval_str = input(f"Digite o tempo em minutos (ex: 5, 15, 30) [Enter=1]: ").strip()
             if not interval_str:
                 return "1min"
             
@@ -340,13 +358,13 @@ class ConsoleRunner:
                     # Converte para o formato de frequência do Pandas (ex: '15min')
                     return f"{interval_min}min"
                 else:
-                    print("❌ Valor fora do intervalo permitido (1 a 30 minutos).")
+                    print("Valor fora do intervalo permitido (1 a 30 minutos).")
             except ValueError:
-                print("❌ Entrada inválida. Por favor, digite apenas números.")
+                print("Entrada inválida. Por favor, digite apenas números.")
         
     def _load_data(self, data_path: str, target_interval: Optional[str]) -> pd.DataFrame:
         """Carrega dados do CSV"""
-        print(f"\n📥 Carregando dados de {os.path.basename(data_path)}...")
+        print(f"\nCarregando dados de {os.path.basename(data_path)}...")
         
         return self.data_provider.get_data(
             symbol=data_path, 
@@ -358,36 +376,36 @@ class ConsoleRunner:
     
     def _get_date_range(self, data: pd.DataFrame) -> tuple:
         """Solicita filtro de período (opcional)"""
-        print(f"\n📅 FILTRO DE PERÍODO (Opcional)")
+        print(f"\nFILTRO DE PERÍODO (Opcional)")
         print(f"-" * 30)
-        print(f"📊 Dados disponíveis: {data.index[0].date()} a {data.index[-1].date()}")
-        print(f"📏 Total de barras: {len(data)}")
+        print(f"Dados disponíveis: {data.index[0].date()} a {data.index[-1].date()}")
+        print(f"Total de barras: {len(data)}")
         
-        use_filter = input(f"\n🔍 Filtrar período? (s/N): ").strip().lower()
+        use_filter = input(f"\nFiltrar período? (s/N): ").strip().lower()
         
         if use_filter in ['s', 'sim', 'y', 'yes']:
             try:
-                start_str = input(f"📅 Data início (YYYY-MM-DD): ").strip()
-                end_str = input(f"📅 Data fim (YYYY-MM-DD): ").strip()
+                start_str = input(f"Data início (YYYY-MM-DD): ").strip()
+                end_str = input(f"Data fim (YYYY-MM-DD): ").strip()
                 
                 start_date = pd.to_datetime(start_str) if start_str else None
                 end_date = pd.to_datetime(end_str) if end_str else None
                 
                 return start_date, end_date
             except:
-                print(f"⚠️ Formato de data inválido, usando período completo")
+                print(f"Formato de data inválido, usando período completo")
         
         return None, None
     
     def _display_results(self, result):
         """Exibe resultados do backtest no formato consolidado."""
         print(f"\n" + "=" * 60)
-        print(f"📈 RESULTADOS DO BACKTEST - {result.strategy_name}")
+        print(f"RESULTADOS DO BACKTEST - {result.strategy_name}")
         print(f"   Ativo: {result.asset} | Timeframe: {result.timeframe}")
         print(f"=" * 60)
         
         if not result.metrics:
-            print(f"❌ Nenhuma operação executada")
+            print(f"Nenhuma operação executada")
             return
         
         m = result.metrics
@@ -414,8 +432,8 @@ class ConsoleRunner:
         
         # --- Lista de Trades ---
         if len(result.trades) > 0:
-            print(f"\n📋 ÚLTIMAS 5 OPERAÇÕES:")
-            print(f"{'#':<3} {'Tipo':<5} {'Entrada':<16} {'Saída':<16} {'Resultado':<10}")
+            print(f"\nÚLTIMAS 5 OPERAÇÕES:")
+            print(f"{ '#':<3} {'Tipo':<5} {'Entrada':<16} {'Saída':<16} {'Resultado':<10}")
             print(f"-" * 60)
             
             for i, trade in enumerate(result.trades[-5:], 1):
@@ -438,7 +456,7 @@ class ConsoleRunner:
 
     def _export_options(self, result):
         """Oferece opções de exportação com salvamento automático."""
-        print(f"\n💾 OPÇÕES DE EXPORTAÇÃO:")
+        print(f"\nOPÇÕES DE EXPORTAÇÃO:")
         print(f"1. Relatório detalhado (Excel)")
         print(f"2. Lista de trades (CSV)")
         print(f"3. Gráfico de equity (PNG)")
@@ -487,10 +505,10 @@ class ConsoleRunner:
                     trades_df = pd.DataFrame([t.__dict__ for t in result.trades])
                     trades_df.to_excel(writer, sheet_name='Trades', index=False)
             
-            print(f"✅ Relatório Excel salvo em: {filepath.relative_to(self.base_dir)}")
+            print(f"Relatório Excel salvo em: {filepath.relative_to(self.base_dir)}")
             
         except Exception as e:
-            print(f"❌ Erro ao salvar Excel: {str(e)}")
+            print(f"Erro ao salvar Excel: {str(e)}")
     
     def _export_trades_csv(self, result, filename_base: str, output_dir: Path):
         """Exporta lista de trades em CSV"""
@@ -498,10 +516,10 @@ class ConsoleRunner:
             filepath = output_dir / f"{filename_base}.csv"
             trades_df = pd.DataFrame([t.__dict__ for t in result.trades])
             trades_df.to_csv(filepath, index=False, date_format='%Y-%m-%d %H:%M:%S')
-            print(f"✅ Trades CSV salvos em: {filepath.relative_to(self.base_dir)}")
+            print(f"Trades CSV salvos em: {filepath.relative_to(self.base_dir)}")
             
         except Exception as e:
-            print(f"❌ Erro ao salvar CSV: {str(e)}")
+            print(f"Erro ao salvar CSV: {str(e)}")
     
     def _export_equity_chart(self, result, filename_base: str, output_dir: Path):
         """Exporta gráfico de equity"""
@@ -519,10 +537,10 @@ class ConsoleRunner:
             plt.savefig(filepath, dpi=300)
             plt.close()
             
-            print(f"✅ Gráfico de equity salvo em: {filepath.relative_to(self.base_dir)}")
+            print(f"Gráfico de equity salvo em: {filepath.relative_to(self.base_dir)}")
             
         except Exception as e:
-            print(f"❌ Erro ao salvar gráfico: {str(e)}")
+            print(f"Erro ao salvar gráfico: {str(e)}")
 
 def main():
     """Função principal"""
@@ -532,6 +550,7 @@ def main():
     parser.add_argument('--start-date', help='Data início (YYYY-MM-DD)')
     parser.add_argument('--end-date', help='Data fim (YYYY-MM-DD)')
     parser.add_argument('--output', '-o', help='Diretório de saída')
+    parser.add_argument('--timeframe', '-t', help='Tempo gráfico em minutos (ex: 5, 15)')
     parser.add_argument('--batch', action='store_true', help='Modo batch (não-interativo)')
     
     args = parser.parse_args()
@@ -545,7 +564,8 @@ def main():
             args.data, 
             args.start_date, 
             args.end_date, 
-            args.output
+            args.output,
+            args.timeframe
         )
     else:
         # Modo interativo

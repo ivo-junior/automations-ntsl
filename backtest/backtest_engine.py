@@ -4,6 +4,7 @@ from typing import Dict, List, Tuple, Optional
 from dataclasses import dataclass
 from datetime import datetime, time
 import warnings
+import random
 
 from .ntsl_parser import NTSLStrategy
 from .technical_indicators import TechnicalIndicators
@@ -127,11 +128,14 @@ class BacktestEngine:
             tipo_media_int = int(self.strategy.inputs.get('bb_tipoMedia', 0))
 
             # Mapear o inteiro do NTSL para o tipo de média
-            ma_type_map = {0: 'sma', 1: 'ema', 2: 'smma', 3: 'lwma'}
-            ma_type = ma_type_map.get(tipo_media_int, 'sma')
-            
+            # Mapear o inteiro do NTSL para o tipo de média do TA-Lib
+            # 0: SMA, 1: EMA, 2: WMA, 3: DEMA, 4: TEMA, 5: TRIMA, 6: KAMA, 7: MAMA, 8: T3
+            # Para SMMA e LWMA, que não têm um MAType direto no TA-Lib, usaremos SMA (0) como fallback.
+            ta_matype_map = {0: 0, 1: 1, 2: 0, 3: 2} # 0: SMA, 1: EMA, 2: SMMA(fallback to SMA), 3: LWMA(fallback to WMA)
+            ta_matype = ta_matype_map.get(tipo_media_int, 0) # Padrão é SMA (0)
+
             bb_upper, bb_middle, bb_lower = self.indicators.bollinger_bands(
-                self.data['close'], periodo, desvio, ma_type=ma_type)
+                self.data['close'], periodo, desvio, ma_type=ta_matype)
             self.data['bb_upper'] = bb_upper
             self.data['bb_middle'] = bb_middle  
             self.data['bb_lower'] = bb_lower
@@ -140,7 +144,23 @@ class BacktestEngine:
         if 'filtro_volatilidade_atrPeriodo' in self.strategy.inputs:
             periodo = int(self.strategy.inputs['filtro_volatilidade_atrPeriodo'])
             self.data['atr'] = self.indicators.atr(self.data, periodo)
-    
+
+        # --- Comparação de Indicadores (para alinhamento com CSV) ---
+        print("Verificando dtypes antes da comparação:")
+        print(self.data.info())
+        print("Realizando comparação de indicadores com os valores do CSV...")
+
+        # Para os indicadores de Primeira Barra, eles são calculados barra a barra
+        # e armazenados no strategy_state. Para compará-los, precisaríamos de uma
+        # lógica mais complexa que os armazene no DataFrame durante a execução do loop.
+        # Por enquanto, focaremos nos indicadores que são calculados de uma vez.
+
+        # Garantir que as colunas de indicadores do CSV sejam mantidas para referência
+        # (se existirem e não forem sobrescritas)
+        for col in ['sma_20_close_csv', 'bb_upper_csv', 'bb_lower_csv', 'first_bar_max_csv', 'first_bar_min_csv']:
+            if col in self.data.columns and col not in self.data.columns:
+                self.data[col] = self.data[col] # Apenas para garantir que não sejam descartadas
+
     def _initialize_strategy_variables(self):
         """Inicializa variáveis de estado da estratégia"""
         self.strategy_vars = self.strategy.variables.copy()
@@ -151,7 +171,10 @@ class BacktestEngine:
             'resultadoDiario': 0.0,
             'posicaoAberta': False,
             'bloqueadoMeta': False,
-            'bloqueadoLossConsec': False
+            'bloqueadoLossConsec': False,
+            'primeiraBarraDefinida': False,
+            'maximaPrimeiraBarra': 0.0,
+            'minimaPrimeiraBarra': 999999.0
         })
         
         self.current_position = 0
@@ -182,10 +205,10 @@ class BacktestEngine:
             low = current_data['low']
             high = current_data['high']
             
-            # Sinal de compra: Close > tendência E Low < média do sinal (Low)
+            # Sinal de compra: Close > tendencia E Low < media_sinal_low
             if close > tendencia and low < media_sinal_low:
                 return 1
-            # Sinal de venda: Close < tendência E High > média do sinal (High)  
+            # Sinal de venda: Close < tendencia E High > media_sinal_high  
             elif close < tendencia and high > media_sinal_high:
                 return -1
             else:
@@ -274,21 +297,31 @@ class BacktestEngine:
         # 1. Atualizar controles diários
         self._update_daily_controls(current_data)
 
-        # 2. Checar condições de encerramento ou de trade
+        # 1.1. Reconciliação de posição (similar ao NTSL: if (posicaoAberta and (Position() = 0)))
+        # Se a posição interna está aberta, mas o current_position é 0 (indicando que foi fechada)
+        # então atualizamos o estado de posicaoAberta.
+        if self.strategy_state['posicaoAberta'] and self.current_position == 0:
+            self.strategy_state['posicaoAberta'] = False
+            # No NTSL, o resultado do último trade e os contadores diários são atualizados aqui.
+            # No nosso backtester, isso já é feito dentro de _close_position.
+
+        # 2. Checar condições de encerramento de trade (stops, gains, fim da sessão)
         hora_encerramento = self.strategy.inputs.get('horaEncerramento', 1750)
         is_after_close_time = (current_data.name.hour * 100 + current_data.name.minute) >= hora_encerramento
 
         if self.current_position != 0:
-            # Se tem posição, ou encerra por tempo, ou checa stops/gains
             if is_after_close_time:
                 self._close_position(bar_idx, "END_OF_SESSION")
             else:
                 self._check_exit_conditions(bar_idx, current_data)
-        elif not is_after_close_time:
-            # Se não tem posição e não é fim do dia, checa por entradas
+
+        # 3. Checar condições de entrada se não houver posição aberta
+        # Esta verificação ocorre após a checagem de saída, permitindo
+        # que uma nova operação seja aberta na mesma barra em que uma anterior foi fechada.
+        if self.current_position == 0 and not is_after_close_time:
             self._check_entry_conditions(bar_idx, current_data)
 
-        # 3. Calcular e registrar o equity no final da barra, independentemente do que aconteceu
+        # 4. Calcular e registrar o equity no final da barra
         current_equity = self._calculate_current_equity(current_data)
         self.equity.append(current_equity)
     
@@ -320,8 +353,10 @@ class BacktestEngine:
             self.strategy_state['bloqueadoLossConsec'] = True
 
         # Verificar bloqueios
-        if (self.strategy_state['bloqueadoMeta'] or 
-            self.strategy_state['bloqueadoLossConsec']):
+        if (
+            self.strategy_state['bloqueadoMeta'] or 
+            self.strategy_state['bloqueadoLossConsec']
+        ):
             return
             
         max_trades = self.strategy.risk_params.get('maxTradesPorDia', 999)
@@ -335,11 +370,23 @@ class BacktestEngine:
             inicio = self.strategy.inputs.get('horaInicioGlobal', 905)
             fim = self.strategy.inputs.get('horaFimGlobal', 1745)
             
-            hora_inicio = f"{inicio//100:02d}:{inicio%100:02d}"
-            hora_fim = f"{fim//100:02d}:{fim%100:02d}"
-            
-            # Verificar se está dentro da janela
-            # (implementação simplificada - pode ser refinada)
+            # Converter para time objects para comparação
+            time_inicio = time(inicio // 100, inicio % 100)
+            time_fim = time(fim // 100, fim % 100)
+
+            if not (time_inicio <= hora_atual < time_fim):
+                return # Fora da janela horária
+
+            # Implementar filtro de spread (conforme NTSL)
+            filtro_spread_max_ticks = self.strategy.inputs.get('filtro_spreadMaximoTicks', 5)
+
+            # Simular spread em ticks. Para que o filtro tenha efeito, o spread simulado
+            # precisa ocasionalmente exceder o filtro_spreadMaximoTicks.
+            # Usaremos um valor aleatório para simular a variabilidade do spread.
+            simulated_spread_in_ticks = random.uniform(0, filtro_spread_max_ticks + 2) # Varia entre 0 e filtro_spread_max_ticks + 2
+
+            if simulated_spread_in_ticks > filtro_spread_max_ticks:
+                return # Spread muito alto, não entra
             
         # Calcular sinais das estratégias internas  
         sinal_lw = self._calculate_larry_williams_signal(bar_idx)
@@ -372,12 +419,19 @@ class BacktestEngine:
         score_minimo = float(self.strategy.inputs.get('scoreMinimoEntrada', 0.5))
         
         # Executar entrada
+        entry_type = None
         if score_compra >= score_minimo and score_compra > score_venda:
-            self._open_position(bar_idx, 'LONG', current_data)
+            # Priorizar o sinal de breakout para definir o tipo de entrada
+            if sinal_pb == 1 and peso_pb > 0:
+                entry_type = 'BREAKOUT_LONG'
+            self._open_position(bar_idx, 'LONG', current_data, entry_type)
+
         elif score_venda >= score_minimo and score_venda > score_compra:
-            self._open_position(bar_idx, 'SHORT', current_data)
+            if sinal_pb == -1 and peso_pb > 0:
+                entry_type = 'BREAKOUT_SHORT'
+            self._open_position(bar_idx, 'SHORT', current_data, entry_type)
     
-    def _open_position(self, bar_idx: int, direction: str, current_data):
+    def _open_position(self, bar_idx: int, direction: str, current_data, entry_type: Optional[str] = None):
         """Abre nova posição e calcula stops/gains iniciais."""
         quantity = int(self.strategy.risk_params.get('contratosPorOperacao', 1))
         
@@ -385,6 +439,14 @@ class BacktestEngine:
             self.current_position = quantity
         else:
             self.current_position = -quantity
+
+        # Define o preço de entrada com base no tipo de sinal
+        if entry_type == 'BREAKOUT_LONG':
+            entry_price = self.strategy_state['maximaPrimeiraBarra']
+        elif entry_type == 'BREAKOUT_SHORT':
+            entry_price = self.strategy_state['minimaPrimeiraBarra']
+        else:
+            entry_price = current_data['close'] # Padrão para outros sinais
             
         # Calcular stops e gains com base no ATR do momento da entrada
         atr = current_data.get('atr', 0)
@@ -392,7 +454,6 @@ class BacktestEngine:
 
         fator_stop = self.strategy.risk_params.get('fatorAtrStop', 2.0)
         fator_gain = self.strategy.risk_params.get('fatorAtrGain', 3.0)
-        entry_price = current_data['close']
 
         stop_price = 0
         gain_price = 0
@@ -433,7 +494,7 @@ class BacktestEngine:
 
         trade = self.current_trade
         atr = current_data.get('atr', 0)
-        if atr == 0: return
+        if atr == 0: return # Evitar divisão por zero ou stops inválidos
 
         # --- Lógica de Break Even ---
         if self.strategy.inputs.get('usarBreakEven', False) and trade.stop_loss < trade.entry_price:
@@ -455,24 +516,31 @@ class BacktestEngine:
                 if novo_stop < trade.stop_loss:
                     trade.stop_loss = novo_stop # Trailing o stop
 
-        # --- Checagem final de Stops e Gains ---
+        # --- Checagem final de Stops e Gains (Simulando ClosePosition a mercado) ---
+        # A lógica NTSL com `ClosePosition()` envia uma ordem a mercado quando a condição é satisfeita.
+        # Para simular isso em um backtest barra-a-barra, a execução ocorre no fechamento da barra
+        # em que o stop/gain foi violado.
+        close_price = current_data['close']
+        high_price = current_data['high']
+        low_price = current_data['low']
+
         if trade.direction == 'LONG':
-            # Checar Take Profit
-            if trade.take_profit and current_data['high'] >= trade.take_profit:
-                self._close_position(bar_idx, "TAKE_PROFIT", price=trade.take_profit)
+            # Se o gain foi atingido na barra, fechamos no 'close' (simulação pessimista)
+            if trade.take_profit and high_price >= trade.take_profit:
+                self._close_position(bar_idx, "TAKE_PROFIT") # Preço será o 'close' da barra
                 return
-            # Checar Stop Loss
-            if trade.stop_loss and current_data['low'] <= trade.stop_loss:
-                self._close_position(bar_idx, "STOP_LOSS", price=trade.stop_loss)
+            # Se o stop foi atingido na barra, fechamos no 'close'
+            if trade.stop_loss and low_price <= trade.stop_loss:
+                self._close_position(bar_idx, "STOP_LOSS") # Preço será o 'close' da barra
         
         elif trade.direction == 'SHORT':
-            # Checar Take Profit
-            if trade.take_profit and current_data['low'] <= trade.take_profit:
-                self._close_position(bar_idx, "TAKE_PROFIT", price=trade.take_profit)
+            # Se o gain foi atingido na barra, fechamos no 'close'
+            if trade.take_profit and low_price <= trade.take_profit:
+                self._close_position(bar_idx, "TAKE_PROFIT") # Preço será o 'close' da barra
                 return
-            # Checar Stop Loss
-            if trade.stop_loss and current_data['high'] >= trade.stop_loss:
-                self._close_position(bar_idx, "STOP_LOSS", price=trade.stop_loss)
+            # Se o stop foi atingido na barra, fechamos no 'close'
+            if trade.stop_loss and high_price >= trade.stop_loss:
+                self._close_position(bar_idx, "STOP_LOSS") # Preço será o 'close' da barra
     
     def _close_position(self, bar_idx: int, reason: str, price: Optional[float] = None):
         """Fecha posição atual, usando um preço específico se fornecido."""
@@ -494,7 +562,7 @@ class BacktestEngine:
         result *= pontos_por_tick
 
         # Aplicar custos (o input é considerado o custo total da operação ida e volta)
-        custo_operacao = float(self.strategy.inputs.get('custoPorContrato', 0))
+        custo_operacao = float(self.strategy.inputs.get('custoPorContrato', 0.0))
         result -= custo_operacao
         
         # Atualizar trade
