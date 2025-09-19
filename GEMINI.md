@@ -102,100 +102,23 @@ Durante a interação, foram descobertas as seguintes regras e convenções para
 - Tenha paciência. Grandes movimentos demoram para se desenrolar;
 - Não fique curioso demais sobre a lógica por trás de um movimento. A chave para a fortuna no mercado é a simplicidade.
 
-# Resultados do Profit Pro no período de 29/07/2025 a 16/09/2025
-📊 Timeframe 1 Minuto
+# Resultados do Profit Pro no período de 3 meses
+
+Timeframe 15 Minutos (versão melhorada)
 
 >>Resumo Principal
-Saldo Líquido Total: R$ 27,00
-Fator de Lucro: 1,02
-Percentual de Acerto: 46,46%
-Total de Operações: 99
+Saldo Líquido Total: R$ 2.075,00
+Fator de Lucro: 1,60
+Percentual de Acerto: 47,06%
+Total de Operações: 102
 
 >>Detalhes Financeiros
-Lucro Bruto: R$ 1.596,00
-Prejuízo Bruto: R$ -1.569,00
+Lucro Bruto: R$ 5.551,00
+Prejuízo Bruto: R$ -3.476,00
 Custos Totais: R$ 0,00
 
->>talhes Operacionais
-Operações Vencedoras: 46
+>>Detalhes Operacionais
+Operações Vencedoras: 48
 Operações Perdedoras: 52
-Média por Trade: R$ 0,27
-Média Ganho / Média Perda: 1,15
-
----
-
-📊 Timeframe 5 Minutos
-
->>Resumo Principal
-Saldo Líquido Total: R$ 281,00
-Fator de Lucro: 1,16
-Percentual de Acerto: 51,72%
-Total de Operações: 58
-
->>Detalhes Financeiros
-Lucro Bruto: R$ 2.029,00
-Prejuízo Bruto: R$ -1.748,00
-Custos Totais: R$ 0,00
-
->>Detalhes Operacionais
-Operações Vencedoras: 30
-Operações Perdedoras: 26
-Média por Trade: R$ 4,84
-Média Ganho / Média Perda: 1,01
-
-📊 Timeframe 10 Minutos
-
->>Resumo Principal
-Saldo Líquido Total: R$ 473,00
-Fator de Lucro: 1,28
-Percentual de Acerto: 44,44%
-Total de Operações: 45
-
->>Detalhes Financeiros
-Lucro Bruto: R$ 2.136,00
-Prejuízo Bruto: R$ -1.663,00
-Custos Totais: R$ 0,00
-
->>Detalhes Operacionais
-Operações Vencedoras: 20
-Operações Perdedoras: 23
-Média por Trade: R$ 10,51
-Média Ganho / Média Perda: 1,48
-
-📊 Timeframe 15 Minutos
-
-Resumo Principal
->>Saldo Líquido Total: R$ 616,00
-Fator de Lucro: 1,42
-Percentual de Acerto: 47,22%
-Total de Operações: 36
-
->>Detalhes Financeiros
-Lucro Bruto: R$ 2.072,00
-Prejuízo Bruto: R$ -1.456,00
-Custos Totais: R$ 0,00
-
->>Detalhes Operacionais
-Operações Vencedoras: 17
-Operações Perdedoras: 19
-Média por Trade: R$ 17,11
-Média Ganho / Média Perda: 1,59
-
-📊 Timeframe 30 Minutos
-
->>Resumo Principal
-Saldo Líquido Total: R$ 291,00
-Fator de Lucro: 1,18
-Percentual de Acerto: 52,38%
-Total de Operações: 21
-
->>Detalhes Financeiros
-Lucro Bruto: R$ 1.953,00
-Prejuízo Bruto: R$ -1.662,00
-Custos Totais: R$ 0,00
-
->>Detalhes Operacionais
-Operações Vencedoras: 11
-Operações Perdedoras: 10
-Média por Trade: R$ 13,86
-Média Ganho / Média Perda: 1,07
+Média por Trade: R$ 20,34
+Média Ganho / Média Perda: 1,73

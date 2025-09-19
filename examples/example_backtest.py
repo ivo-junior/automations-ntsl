@@ -107,7 +107,7 @@ def main():
     print(f"TRADES EXECUTADOS ({len(result.trades)} operações):")
     print("-" * 80)
     for i, trade in enumerate(result.trades[:10]):  # Mostrar apenas primeiros 10
-        print(f"{i+1:2d}. {trade.direction:5s} | "
+        print(f"{i+1:2d}. {trade.direction:5s} | Qtd: {trade.quantity:2d} | "
               f"{trade.entry_time.strftime('%d/%m %H:%M')} -> "
               f"{trade.exit_time.strftime('%d/%m %H:%M') if trade.exit_time else 'ABERTO':11s} | "
               f"R$ {trade.result:8.2f}")

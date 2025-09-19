@@ -82,7 +82,7 @@ Este documento serve como uma referência rápida para todas as funções e cons
 - **BuyPrice() / SellPrice()**: Retorna o preço médio da posição de compra ou venda.
 - **HasPosition()**: Retorna `True` se houver alguma posição aberta.
 - **IsBought() / IsSold()**: Retorna `True` se a posição atual for comprada ou vendida, respectivamente.
-- **DailyResult(`OpenResult: Boolean`)**: Retorna o resultado financeiro do dia (aberto + fechado ou apenas fechado).
+- **DailyResult(`OpenResult: Boolean`)**: Retorna o resultado financeiro do dia. Se `True`, inclui o resultado de operações em aberto. Se `False`, retorna o resultado apenas das operações já encerradas no dia.
 - **OpenResult()**: Retorna o resultado financeiro da posição atualmente em aberto.
 
 ### 15. Funções de Calendário e Tempo
