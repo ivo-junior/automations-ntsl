@@ -1,6 +1,6 @@
 # NTSL-Toolkit: Framework de Desenvolvimento de Estratégias com IA
 
-**Um ecossistema completo para o desenvolvimento, orquestração e análise de estratégias de trading em NTSL, assistido pela IA Gemini, com o objetivo final de tradução para Python/MetaTrader 5.**
+**Um ecossistema completo para o desenvolvimento, orquestração e análise de estratégias de trading em NTSL, assistido pela IA Gemini, com o objetivo final de tradução para Python e integração com o módulo de automação do Profit (Nelogica).**
 
 ---
 
@@ -22,13 +22,24 @@ Este não é apenas um repositório de scripts, mas um **framework de desenvolvi
 2.  **Base de Conhecimento:** A IA utiliza a rica documentação (`docs/`) e o vasto catálogo de exemplos (`docs/catalog.md`) como sua principal fonte de conhecimento para entender, combinar e criar lógicas de trading.
 3.  **Desenvolvimento Orquestrado:** O objetivo é criar "estratégias orquestradoras" robustas, como as encontradas em `estrategias/automations/`. Elas combinam múltiplos sinais e filtros para tomar decisões de trading mais inteligentes.
 4.  **Validação e Resultados:** As estratégias criadas são testadas, e seus resultados (curva de capital, estatísticas) são armazenados como imagens em `docs/imgs/` para validação visual.
-5.  **Objetivo Final:** A lógica NTSL validada serve como um protótipo claro para a tradução para **Python**, visando a integração com a plataforma **MetaTrader 5 (MT5)**.
+5.  **Objetivo Final:** A lógica NTSL validada serve como um protótipo claro para a tradução para **Python**, visando a integração com o **módulo de automação do Profit (Nelogica)**.
 
 ## ✨ Showcase: Resultados do Orquestrador
 
 Os resultados abaixo foram gerados pelas estratégias `orquestrador_moderado_5_preciso.txt` e `orquestrador_moderado_7_consistente.txt`, que são exemplos práticos do que pode ser construído com este framework.
 
-*(Aguardando os nomes dos arquivos de imagem em `docs/imgs/` para inseri-los aqui)*
+### Resultados para `orquestrador_moderado_5_preciso`
+
+![Resultado 1](docs/imgs/resultado_orquestrador_moderado_5_preciso_1.png)
+![Resultado 2](docs/imgs/resultado_orquestrador_moderado_5_preciso_2.png)
+![Resultado 3](docs/imgs/resultado_orquestrador_moderado_5_preciso_3.png)
+
+### Resultados para `orquestrador_moderado_7_consistente`
+
+![Resultado 1](docs/imgs/resultado_orquestrador_moderado_7_consistente_1.png)
+![Resultado 2](docs/imgs/resultado_orquestrador_moderado_7_consistente_2.png)
+![Resultado 3](docs/imgs/resultado_orquestrador_moderado_7_consistente_3.png)
+![Resultado 4](docs/imgs/resultado_orquestrador_moderado_7_consistente_4.png)
 
 ---
 
@@ -40,7 +51,16 @@ O motor de backtest em `backtest/` foi criado para validar a lógica estrutural 
 
 Use este backtest como uma **ferramenta de prototipagem rápida** para desenvolver e iterar sobre a lógica. O teste final e oficial de qualquer estratégia deve ser sempre realizado na plataforma de origem.
 
-### 1. Instalação
+### 1. Preparando os Dados de Mercado
+
+Para realizar os backtests, você precisa de dados históricos em formato CSV.
+
+1.  **Obtenha os Dados:** Exporte os dados históricos do ativo desejado diretamente da plataforma Profit Pro. Você pode exportar em qualquer tempo gráfico (ex: 1 minuto, 5 minutos).
+2.  **Armazene os Dados:** Coloque o arquivo `.csv` gerado dentro da pasta `backtest/dados/`.
+
+O sistema de backtest consegue ler os dados e reamostrá-los para o tempo gráfico que você desejar testar.
+
+### 2. Instalação
 
 O `Makefile` simplifica a configuração do ambiente. Para instalar as dependências e preparar o projeto, execute:
 
@@ -48,7 +68,7 @@ O `Makefile` simplifica a configuração do ambiente. Para instalar as dependên
 make install
 ```
 
-### 2. Desenvolvendo Estratégias com a IA (Gemini CLI)
+### 3. Desenvolvendo Estratégias com a IA (Gemini CLI)
 
 A principal forma de interagir com este projeto é através de diálogo com o agente Gemini. Forneça instruções claras e utilize o contexto dos arquivos do projeto.
 
@@ -60,26 +80,41 @@ A principal forma de interagir com este projeto é através de diálogo com o ag
 
 > "Refatore o arquivo `estrategias/automations/orquestrador_moderado_5_preciso.txt` para incluir uma lógica de trailing stop com base no indicador ATR, conforme descrito em `docs/funcoes_constantes_NTSL.md`."
 
-### 3. Executando o Backtest Local
+### 4. Executando o Backtest Local
 
-Utilize o `Makefile` para executar os backtests via `backtest/console_runner.py`.
+Existem duas formas principais de executar um backtest:
 
--   **Listar estratégias disponíveis:**
+**Método A: Via `Makefile` (Recomendado para rapidez)**
+
+O `Makefile` oferece comandos prontos para as tarefas mais comuns.
+
+-   **Listar estratégias e dados disponíveis:**
     ```sh
     make list-strategies
+    make list-data
     ```
 
--   **Executar um backtest em modo batch:**
+-   **Executar um backtest em modo batch (não interativo):**
     ```sh
-    make batch STRATEGY=orquestrador_moderado_7_consistente.txt
+    make batch STRATEGY=orquestrador_moderado_7_consistente.txt DATA=WINFUT_F_0_1min.csv
     ```
 
--   **Executar um teste interativo (guiado):**
+-   **Executar um teste interativo (guiado pelo console):**
     ```sh
     make test
     ```
 
-### 4. Análise e Iteração
+**Método B: Via Script Direto (Para depuração e controle)**
+
+Para um controle mais granular, você pode editar e executar o script `examples/example_backtest.py` diretamente.
+
+1.  **Edite o arquivo:** Abra `examples/example_backtest.py` e ajuste as variáveis no topo do arquivo para apontar para a estratégia e os dados que deseja testar.
+2.  **Execute o script:**
+    ```sh
+    python examples/example_backtest.py
+    ```
+
+### 5. Análise e Iteração
 
 Analise os resultados gerados (relatórios em Excel, gráficos de equity). Com base nos insights, inicie um novo ciclo de desenvolvimento, refinando a estratégia com novos prompts para a IA.
 
