@@ -173,16 +173,14 @@ class DataProvider:
         
         try:
             # Carregar dados do CSV com formato específico
+            # Não parsear datas ou definir índice aqui, faremos isso após a leitura
             try:
                 data = pd.read_csv(
                     file_path,
                     sep=';',
                     encoding='utf-8',
                     decimal=',',
-                    thousands='.',
-                    parse_dates=['Data'],
-                    index_col='Data',
-                    dayfirst=True
+                    thousands='.'
                 )
             except UnicodeDecodeError:
                 # Tentar latin-1 se utf-8 falhar
@@ -191,34 +189,35 @@ class DataProvider:
                     sep=';',
                     encoding='latin-1',
                     decimal=',',
-                    thousands='.',
-                    parse_dates=['Data'],
-                    index_col='Data',
-                    dayfirst=True
+                    thousands='.'
                 )
             
             # Mapeamento robusto de nomes de coluna
             # Lista de possíveis nomes para cada coluna padrão (case-insensitive e com/sem acentos)
             col_candidates = {
+                'data': ['data', 'date'], # Explicitamente mapear 'Data' para 'data'
+                'hora': ['hora', 'time'], # Explicitamente mapear 'Hora' para 'hora'
                 'open': ['abertura', 'open'],
-                'high': ['maxima', 'máxima', 'm_xima', 'high', 'm\x87xima'],
-                'low': ['minima', 'mínima', 'm_nima', 'low', 'm\x92nima'],
+                'high': ['maxima', 'máxima', 'm_xima', 'high', 'm\x87ximo', 'm\xe1ximo', 'm\x81ximo', 'maximo'],
+                'low': ['minima', 'mínima', 'm_nima', 'low', 'm\x92nimo', 'm\xednimo', 'minimo'],
                 'close': ['fechamento', 'close'],
                 'volume': ['volume', 'vol'],
+                'quantity': ['quantidade', 'quantity', 'qtd'], # Adicionado para mapear 'Quantidade'
+                # Colunas de referência de estratégias (se existirem no CSV)
                 'sma_20_close_csv': ['orquestrador_moderado_1_visual [0.50 0.40 0.30 0.30 20 3 900 915 20 2.00 0 verdadeiro verdadeiro verdadeiro]'],
                 'bb_upper_csv': ['orquestrador_moderado_1_visual [0.50 0.40 0.30 0.30 20 3 900 915 20 2.00 0 verdadeiro verdadeiro verdadeiro].1'],
                 'bb_lower_csv': ['orquestrador_moderado_1_visual [0.50 0.40 0.30 0.30 20 3 900 915 20 2.00 0 verdadeiro verdadeiro verdadeiro].2'],
                 'first_bar_max_csv': ['orquestrador_moderado_1_visual [0.50 0.40 0.30 0.30 20 3 900 915 20 2.00 0 verdadeiro verdadeiro verdadeiro].3'],
-                'first_bar_min_csv': ['orquestrador_moderado_1_visual [0.50 0.40 0.30 0.30 20 3 900 915 20 2.00 0 verdadeiro verdadeiro verdadeiro].4']
+                'first_bar_min_csv': ['orquestrador_moderador_1_visual [0.50 0.40 0.30 0.30 20 3 900 915 20 2.00 0 verdadeiro verdadeiro verdadeiro].4']
             }
             
             # Criar um dicionário de renomeação dinamicamente
             rename_map = {}
             for current_col in data.columns:
-                # Não normalizar acentos aqui, pois já estamos lidando com as representações de bytes
                 normalized_current_col = current_col.lower()
                 for standard_name, candidates in col_candidates.items():
-                    if normalized_current_col in candidates or current_col in candidates:
+                    # Usar 'in' para verificar se a coluna atual (normalizada ou original) está nos candidatos
+                    if normalized_current_col in [c.lower() for c in candidates] or current_col in candidates:
                         rename_map[current_col] = standard_name
                         break
             
@@ -226,6 +225,18 @@ class DataProvider:
             print("Colunas originais do CSV:", data.columns.tolist())
             data.rename(columns=rename_map, inplace=True)
             print("Colunas após renomeação:", data.columns.tolist())
+
+            # Combinar 'Data' e 'Hora' para criar o índice de datetime
+            if 'data' in data.columns and 'hora' in data.columns:
+                data['datetime'] = pd.to_datetime(data['data'] + ' ' + data['hora'], dayfirst=True)
+                data.set_index('datetime', inplace=True)
+                data.drop(columns=['data', 'hora'], inplace=True)
+            elif 'data' in data.columns:
+                data['datetime'] = pd.to_datetime(data['data'], dayfirst=True)
+                data.set_index('datetime', inplace=True)
+                data.drop(columns=['data'], inplace=True)
+            else:
+                raise ValueError("Colunas 'Data' e/ou 'Hora' não encontradas para criar o índice de tempo.")
 
             # Verificar se as colunas de referência foram carregadas
             ref_cols = ['sma_20_close_csv', 'bb_upper_csv', 'bb_lower_csv']
@@ -276,8 +287,10 @@ class DataProvider:
                 raise ValueError("Nenhum dado válido encontrado após limpeza")
             
             print(f"   Período final: {data.index.min()} até {data.index.max()}")
-            # Incluir colunas de referência se existirem
+            # Incluir colunas de referência e 'quantity' se existirem
             final_cols = required_cols + ['volume']
+            if 'quantity' in data.columns: # Adicionar 'quantity' se estiver presente
+                final_cols.append('quantity')
             ref_cols = ['sma_20_close_csv', 'bb_upper_csv', 'bb_lower_csv', 'first_bar_max_csv', 'first_bar_min_csv']
             for col in ref_cols:
                 if col in data.columns:
